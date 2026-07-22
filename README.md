@@ -181,6 +181,24 @@ A curved segment can calculate a safe speed based on:
 
 ---
 
+# Signalling
+
+Responsible for managing vehicle movement conflicts and ensuring valid traversal of the network. It operates as an additional layer above the network, routes, and vehicles, using their current state to determine whether movement is permitted.
+
+The network defines the static infrastructure, including nodes, tracks, and connections. Routes define the intended path through the network, while vehicles store their current position and progress along their assigned routes.
+
+The signalling system is intended to handle:
+- Track occupancy
+- Vehicle spacing requirements
+- Opposing vehicle movement conflicts
+- Switch track permissions
+- Movement restrictions and stopping conditions
+
+When a vehicle attempts to enter or continue along a track, it queries the signalling system. The signalling system evaluates the surrounding vehicles, track properties, and route information to determine whether the vehicle can proceed, must reduce speed, or must stop.
+
+Future extensions may include block signalling, signal states, track reservations, priority handling, etc.
+
+
 # Rendering
 
 **Display graphics for:**

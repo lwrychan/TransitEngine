@@ -1,5 +1,8 @@
 #pragma once
 
+#include "core/SegmentId.hpp"
+#include "core/RouteId.hpp"
+
 namespace core
 {
     class Vehicle
@@ -30,10 +33,18 @@ namespace core
         double setDeceleration(double deceleration);
         int setPassengerCapacity(int capacity);
 
+        void setRoute(RouteId route);
+        void setSegment(SegmentId route);
+
     private:
         double maxOperatingSpeed;
         double acceleration;
         double deceleration;
         int passengerCapacity;
+
+        RouteId assignedRouteId;
+        SegmentId currentSegmentId;
+
+        double segmentProgress = 0.0;
     };
 }
