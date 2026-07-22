@@ -64,9 +64,9 @@ The `World` class is the main container for the simulation state.
 
 ---
 
-## Simulation
+## SimulationClock
 
-Contains the simulation state.
+Contains the simulation time state.
 
 **Features:**
 

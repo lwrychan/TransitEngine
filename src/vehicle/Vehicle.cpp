@@ -1,4 +1,4 @@
-#include "vehicles/Vehicle.hpp"
+#include "vehicle/Vehicle.hpp"
 
 namespace core
 {

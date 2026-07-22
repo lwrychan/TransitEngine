@@ -7,5 +7,11 @@ using namespace core;
 
 int main()
 {
+    CoreConfig config;
+
+    World world(config);
+
+    world.run();
+
     return 0;
 }

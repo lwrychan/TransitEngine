@@ -9,7 +9,8 @@ add_executable(
     transit-engine
     src/main.cpp
     src/core/World.cpp
-    src/vehicles/Vehicle.cpp
+    src/core/Clock.cpp
+    src/vehicle/Vehicle.cpp
 )
 
 target_include_directories(

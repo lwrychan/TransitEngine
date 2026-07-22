@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "CoreConfig.hpp"
-#include "vehicles/Vehicle.hpp"
+#include "Clock.hpp"
 
 namespace core
 {
@@ -12,11 +12,14 @@ namespace core
     {
     public:
         World(const CoreConfig &config);
-        void step();
+
+        Clock &getClock() { return clock; };
+
+        void run();
 
     private:
-        double worldTime;
-        std::vector<Vehicle> vehicles;
-        CoreConfig config;
+        CoreConfig globalConfig;
+        Clock clock;
+        double timestep;
     };
 }
