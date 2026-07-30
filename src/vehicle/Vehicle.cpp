@@ -1,22 +1,25 @@
 #include "vehicle/Vehicle.hpp"
 
-namespace core
+namespace vehicle
 {
     Vehicle::Vehicle(
-        double maxOperatingSpeed,
-        double acceleration,
-        double deceleration,
+        double maxOperatingSpeedKph,
+        double accelerationKphPerSecond,
+        double decelerationKphPerSecond,
         int passengerCapacity)
-        : maxOperatingSpeed(maxOperatingSpeed),
-          acceleration(acceleration),
-          deceleration(deceleration),
+        : maxOperatingSpeed(maxOperatingSpeedKph / 3.6),
+          acceleration(accelerationKphPerSecond / 3.6),
+          deceleration(decelerationKphPerSecond / 3.6),
           passengerCapacity(passengerCapacity) {}
 
     void Vehicle::update(double timestep) {};
 
-    const double Vehicle::getMaxOperatingSpeed() { return maxOperatingSpeed; };
-    const double Vehicle::getAcceleration() { return acceleration; };
-    const double Vehicle::getDeceleration() { return deceleration; };
+    const double Vehicle::getMaxOperatingSpeedMs() { return maxOperatingSpeed; };
+    const double Vehicle::getMaxOperatingSpeedKph() { return maxOperatingSpeed * 3.6; };
+    const double Vehicle::getAccelerationMs2() { return acceleration; };
+    const double Vehicle::getDecelerationMs2() { return deceleration; };
+    const double Vehicle::getAccelerationKphPerSecond() { return acceleration * 3.6; };
+    const double Vehicle::getDecelerationKphPerSecond() { return deceleration * 3.6; };
     const int Vehicle::getPassengerCapacity() { return passengerCapacity; };
 
     double Vehicle::setMaxOperatingSpeed(double speed) { return maxOperatingSpeed > 0.0 ? maxOperatingSpeed : 0.0; };

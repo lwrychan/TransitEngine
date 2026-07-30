@@ -2,13 +2,21 @@
 
 
 struct ClockConfig
-{  // Target simulation frames per second. Default provided for convenience.
-    int TARGET_SIMULATION_FPS = 120;
+{  
+    static constexpr int TARGET_SIMULATION_FPS = 120;
+    static constexpr double THREAD_SLEEP_VARIATION_ADJUSTMENT = 2.0;
+    static constexpr double WARNING_THRESHOLD = 1.0;
+
+
+    // Target simulation frames per second. Default provided for convenience.
+    int targetSimulationFps = TARGET_SIMULATION_FPS;
 
     // Adjusts the sleep during time adjustment loop to account for OS delay (ms). Higher values will result in higher CPU usage but less lag.
-    double THREAD_SLEEP_VARIATION_ADJUSTMENT = 2.0;
+    double threadSleepVariationAdjustment = THREAD_SLEEP_VARIATION_ADJUSTMENT;
 
-    double WARNING_THRESHOLD = 1.0;  // Threshold for logging a warning if the simulation is lagging behind (ms)
+    // Threshold for logging a warning if the simulation is lagging behind (ms)
+    double warningThreshold = WARNING_THRESHOLD;
+    
 };
 
 struct NetworkConfig{};

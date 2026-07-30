@@ -7,5 +7,7 @@ namespace network
     public:
         Node() = default;
         ~Node() = default;
+    private:
+        std::string name;
     };
 }

@@ -6,6 +6,7 @@
 #include "vehicle/Vehicle.hpp"
 
 using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+using Vehicle = vehicle::Vehicle;
 
 namespace core
 {

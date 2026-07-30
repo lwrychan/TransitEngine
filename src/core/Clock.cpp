@@ -1,5 +1,3 @@
-#include <chrono>
-
 #include "core/Clock.hpp"
 
 namespace core

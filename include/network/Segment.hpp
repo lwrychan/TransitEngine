@@ -12,6 +12,9 @@ namespace network
 
         void initialize();
         void update(double timestep);
+        
+        void setStart(Node& node);
+        void setEnd(Node& node);
 
     private:
         Node startNode;
