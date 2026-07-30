@@ -8,6 +8,7 @@
 #include "vehicle/Vehicle.hpp"
 #include "cli/Terminal.hpp"
 #include "cli/display/ProgressBar.hpp"
+#include "Simulation.hpp"
 
 using namespace core;
 
@@ -24,5 +25,16 @@ void simulationStartPrint() {
 
 int main()
 {
+    CoreConfig config;
+
+    config.DEBUG_CLOCK = false;
+
+    // // Run the synchronized simulation loop inside the world.
+    // World world(config);
+
+    Simulation sim = Simulation(config);
+
+    sim.run();
+
     return 0;
 }

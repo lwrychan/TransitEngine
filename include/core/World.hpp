@@ -30,15 +30,9 @@ namespace core
 
         void tick();
 
-        void run();
-
-        View view;
-
     private:
         CoreConfig globalConfig;
         Clock clock;
-        
-        double timestep;
         network::Network network;
         std::vector<Vehicle> vehicles;
     };
