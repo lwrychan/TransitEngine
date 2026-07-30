@@ -8,6 +8,21 @@ This engine is designed with separation between simulation logic and visualizati
 
 ---
 
+# Setup
+
+**First Time Setup**
+```
+cd TransitEngine         Navigate to directory
+cmake -S . -B build      Generate build/ folder
+cd build/                Navigate to build/ directory
+cmake --build .          Build project to build/
+```
+
+**Run program**
+```
+* ./TransitEngine          Run program
+```
+
 # Goals
 
 * Support movement between nodes through network segments
