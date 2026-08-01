@@ -55,8 +55,7 @@ find_package(OpenGL REQUIRED)
 # ========================
 # Executables
 # ========================
-add_executable(
-    TransitEngine
+set(SOURCES
     src/main.cpp
     src/core/World.cpp
     src/core/Clock.cpp
@@ -65,8 +64,26 @@ add_executable(
     src/cli/display/ProgressBar.cpp
     src/cli/Terminal.cpp
     src/cli/View.cpp
+    src/Resources.cpp
     src/Simulation.cpp
+    src/render/Render.cpp
 )
+
+if(APPLE)
+    set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/assets/icons/transit-engine-icon-1024.icns")
+
+    add_executable(
+        TransitEngine
+        MACOSX_BUNDLE
+        ${SOURCES}
+        ${APP_ICON}
+    )
+else()
+    add_executable(
+        TransitEngine
+        ${SOURCES}
+    )
+endif()
 
 target_include_directories(
     TransitEngine
@@ -80,8 +97,33 @@ target_link_libraries(
     imgui
 )
 
-add_custom_command(TARGET TransitEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/fonts
-    $<TARGET_FILE_DIR:TransitEngine>/fonts
-)
+if(APPLE)
+    add_custom_command(TARGET TransitEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/resources
+        $<TARGET_BUNDLE_CONTENT_DIR:TransitEngine>/Resources
+    )
+
+    set_source_files_properties(${APP_ICON} PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources")
+
+    set_target_properties(TransitEngine PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_ICON_FILE "transit-engine-icon-1024.icns"
+        MACOSX_BUNDLE_BUNDLE_NAME "TransitEngine"
+        MACOSX_BUNDLE_ICON_FILE "transit-engine-icon-1024.icns"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.lwrychan.transitengine"
+        MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+    )
+
+    target_sources(TransitEngine PRIVATE ${APP_ICON})
+
+else()
+
+    add_custom_command(TARGET TransitEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/resources
+        $<TARGET_FILE_DIR:TransitEngine>/resources
+    )
+endif()

@@ -10,6 +10,10 @@
 using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
 using View = cli::View;
 
+core::World::World(const CoreConfig& config)
+    : globalConfig(config) {
+}
+
 std::vector<Vehicle>& core::World::getVehicles()
 {
     return this->vehicles;
@@ -40,5 +44,4 @@ void core::World::setup() {
 }
 
 void core::World::tick() {
-    this->clock.step();
 }

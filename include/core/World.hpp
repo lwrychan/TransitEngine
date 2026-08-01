@@ -17,8 +17,6 @@ namespace core
     public:
         World(const CoreConfig& config);
 
-        Clock& getClock() { return clock; };
-
         std::vector<Vehicle>& getVehicles();
 
         int addVehicle(Vehicle& vehicle);
@@ -32,7 +30,6 @@ namespace core
 
     private:
         CoreConfig globalConfig;
-        Clock clock;
         network::Network network;
         std::vector<Vehicle> vehicles;
     };
