@@ -7,6 +7,7 @@
 namespace network {
     class Route {
     public:
+        Route() = default;
         Route(std::vector<Segment>& segments);
 
         void addSegment(Segment& segment);

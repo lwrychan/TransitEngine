@@ -1,13 +1,13 @@
 #pragma once
 
-#include "core/SegmentId.hpp"
-#include "core/RouteId.hpp"
+#include "Identifiers.hpp"
 
 namespace vehicle
 {
     class Vehicle
     {
     public:
+        Vehicle() = default;
         Vehicle(double maxOperatingSpeedKph, double accelerationKphPerSecond, double decelerationKphPerSecond, int passengerCapacity);
 
         void update(double timestep);
@@ -39,8 +39,8 @@ namespace vehicle
         double setDeceleration(double decelerationKphPerSecond);
         int setPassengerCapacity(int capacity);
 
-        void setRoute(core::RouteId route);
-        void setSegment(core::SegmentId route);
+        void setRoute(RouteId route);
+        void setSegment(SegmentId segment);
 
     private:
         double maxOperatingSpeed;
@@ -48,8 +48,8 @@ namespace vehicle
         double deceleration;
         int passengerCapacity;
 
-        core::RouteId assignedRouteId;
-        core::SegmentId currentSegmentId;
+        RouteId assignedRouteId;
+        SegmentId currentSegmentId;
 
         double segmentProgress = 0.0;
     };

@@ -67,6 +67,8 @@ set(SOURCES
     src/Resources.cpp
     src/Simulation.cpp
     src/render/Render.cpp
+    src/network/Slot.cpp
+    src/network/SlotMap.cpp
 )
 
 if(APPLE)

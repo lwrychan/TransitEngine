@@ -6,17 +6,10 @@
 
 #include <iostream>
 #include <thread>
-
-using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
-using View = cli::View;
+#include <utility>
 
 core::World::World(const CoreConfig& config)
     : globalConfig(config) {
-}
-
-std::vector<Vehicle>& core::World::getVehicles()
-{
-    return this->vehicles;
 }
 
 network::Network& core::World::getNetwork()
@@ -24,15 +17,14 @@ network::Network& core::World::getNetwork()
     return this->network;
 }
 
-int core::World::addVehicle(Vehicle& vehicle)
+void core::World::addVehicle(Vehicle vehicle)
 {
-    this->vehicles.push_back(vehicle);
-    return int(this->vehicles.size());
+    this->vehicles.add(std::move(vehicle));
 }
 
 void core::World::removeVehicle(std::size_t vehicleIndex)
 {
-    this->vehicles.erase(this->vehicles.begin() + vehicleIndex);
+    this->vehicles.clear(vehicleIndex);
 }
 
 void core::World::setup() {
@@ -44,4 +36,5 @@ void core::World::setup() {
 }
 
 void core::World::tick() {
+    
 }

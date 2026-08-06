@@ -7,6 +7,9 @@
 #include "Clock.hpp"
 #include "network/Network.hpp"
 #include "cli/View.hpp"
+#include "Identifiers.hpp"
+
+#include "SlotMap.hpp"
 
 using View = cli::View;
 
@@ -17,9 +20,7 @@ namespace core
     public:
         World(const CoreConfig& config);
 
-        std::vector<Vehicle>& getVehicles();
-
-        int addVehicle(Vehicle& vehicle);
+        void addVehicle(Vehicle vehicle);
         void removeVehicle(size_t vehicleIndex);
 
         network::Network& getNetwork();
@@ -31,6 +32,10 @@ namespace core
     private:
         CoreConfig globalConfig;
         network::Network network;
-        std::vector<Vehicle> vehicles;
+        SlotMap<vehicle::Vehicle, VehicleId> vehicles;
+
+        SlotMap<network::Node, NodeId> nodes;
+        SlotMap<network::Segment, SegmentId> segments;
+        SlotMap<network::Route, RouteId> routes;
     };
 }
