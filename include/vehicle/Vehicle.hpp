@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "Identifiers.hpp"
 
 namespace vehicle
@@ -8,9 +10,21 @@ namespace vehicle
     {
     public:
         Vehicle() = default;
-        Vehicle(double maxOperatingSpeedKph, double accelerationKphPerSecond, double decelerationKphPerSecond, int passengerCapacity);
+        Vehicle(
+            double maxOperatingSpeedKph,
+            double accelerationKphPerSecond,
+            double decelerationKphPerSecond,
+            int passengerCapacity);
+        Vehicle(
+            const std::string& displayName,
+            double maxOperatingSpeedKph,
+            double accelerationKphPerSecond,
+            double decelerationKphPerSecond,
+            int passengerCapacity);
 
         void update(double timestep);
+
+        const std::string& getDisplayName() const;
 
         const double getMaxOperatingSpeedMs();
         // Returns configured maximum speed in meters/second (m/s)
@@ -39,17 +53,18 @@ namespace vehicle
         double setDeceleration(double decelerationKphPerSecond);
         int setPassengerCapacity(int capacity);
 
-        void setRoute(RouteId route);
-        void setSegment(SegmentId segment);
+        void setRoute(AbstractRouteId route);
+        void setSegment(AbstractSegmentId segment);
 
     private:
+        std::string displayName;
         double maxOperatingSpeed;
         double acceleration;
         double deceleration;
         int passengerCapacity;
 
-        RouteId assignedRouteId;
-        SegmentId currentSegmentId;
+        AbstractRouteId assignedRouteId;
+        AbstractSegmentId currentSegmentId;
 
         double segmentProgress = 0.0;
     };

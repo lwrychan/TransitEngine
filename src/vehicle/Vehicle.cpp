@@ -7,12 +7,29 @@ namespace vehicle
         double accelerationKphPerSecond,
         double decelerationKphPerSecond,
         int passengerCapacity)
-        : maxOperatingSpeed(maxOperatingSpeedKph / 3.6),
+        : Vehicle("Unnamed Vehicle", maxOperatingSpeedKph, accelerationKphPerSecond, decelerationKphPerSecond, passengerCapacity)
+    {
+    }
+
+    Vehicle::Vehicle(
+        const std::string& displayName,
+        double maxOperatingSpeedKph,
+        double accelerationKphPerSecond,
+        double decelerationKphPerSecond,
+        int passengerCapacity)
+        : displayName(displayName.empty() ? "Unnamed Vehicle" : displayName),
+          maxOperatingSpeed(maxOperatingSpeedKph / 3.6),
           acceleration(accelerationKphPerSecond / 3.6),
           deceleration(decelerationKphPerSecond / 3.6),
-          passengerCapacity(passengerCapacity) {}
+          passengerCapacity(passengerCapacity)
+    {
+    }
 
     void Vehicle::update(double timestep) {};
+
+    const std::string& Vehicle::getDisplayName() const {
+        return this->displayName;
+    }
 
     const double Vehicle::getMaxOperatingSpeedMs() { return maxOperatingSpeed; };
     const double Vehicle::getMaxOperatingSpeedKph() { return maxOperatingSpeed * 3.6; };

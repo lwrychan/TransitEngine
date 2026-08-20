@@ -1,8 +1,8 @@
 #include "SlotMap.hpp"
 #include "Identifiers.hpp"
-#include "network/Node.hpp"
-#include "network/Segment.hpp"
-#include "network/Route.hpp"
+#include "network/AbstractNode.hpp"
+#include "network/AbstractSegment.hpp"
+#include "network/AbstractRoute.hpp"
 #include "vehicle/Vehicle.hpp"
 
 template<typename ItemType, typename ItemIdType>
@@ -45,7 +45,33 @@ ItemType& SlotMap<ItemType, ItemIdType>::get(ItemIdType itemId) {
     return slot.getItem();
 }
 
-template class SlotMap<network::Node, NodeId>;
-template class SlotMap<network::Segment, SegmentId>;
-template class SlotMap<network::Route, RouteId>;
+template<typename ItemType, typename ItemIdType>
+size_t SlotMap<ItemType, ItemIdType>::getActiveCount() const {
+    return this->slots.size() - this->freeList.size();
+}
+
+template<typename ItemType, typename ItemIdType>
+void SlotMap<ItemType, ItemIdType>::forEachActive(
+    const std::function<void(ItemIdType, ItemType&)>& callback) {
+    std::vector<bool> isFree(this->slots.size(), false);
+    for (size_t index : this->freeList) {
+        isFree[index] = true;
+    }
+
+    for (size_t index = 0; index < this->slots.size(); ++index) {
+        if (isFree[index]) {
+            continue;
+        }
+
+        ItemIdType id{
+            static_cast<int>(index),
+            static_cast<int>(this->slots[index].getGeneration())
+        };
+        callback(id, this->slots[index].getItem());
+    }
+}
+
+template class SlotMap<network::AbstractNode, AbstractNodeId>;
+template class SlotMap<network::AbstractSegment, AbstractSegmentId>;
+template class SlotMap<network::AbstractRoute, AbstractRouteId>;
 template class SlotMap<vehicle::Vehicle, VehicleId>;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "Slot.hpp"
@@ -14,6 +15,10 @@ public:
     ItemType& get(ItemIdType itemId);
 
     ItemIdType add(ItemType item);
+
+    size_t getActiveCount() const;
+
+    void forEachActive(const std::function<void(ItemIdType, ItemType&)>& callback);
 
 private:
     std::vector<Slot<ItemType>> slots;

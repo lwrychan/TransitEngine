@@ -2,13 +2,83 @@
 #include "core/World.hpp"
 #include "render/Render.hpp"
 
+#include <chrono>
+#include <iostream>
+#include <thread>
+
 Simulation::Simulation(const CoreConfig& config)
     : globalConfig(config),
-      timestep(1.0 / config.clockConfig.targetSimulationFps),
-      simulationRunning(false),
-      clock(timestep),
-      world(config)
+    timestep(1.0 / config.clockConfig.targetSimulationFps),
+    simulationRunning(false),
+    stepOnceRequested(false),
+    speedMultiplier(1.0),
+    simTime(0.0),
+    lastRenderLatencyMs(0.0),
+    lastSimulationLatencyMs(0.0),
+    lastOverallLatencyMs(0.0),
+    clock(timestep),
+    world(config)
 {
+}
+
+core::World& Simulation::getWorld() {
+    return this->world;
+}
+
+const core::World& Simulation::getWorld() const {
+    return this->world;
+}
+
+CoreConfig& Simulation::getConfig() {
+    return this->globalConfig;
+}
+
+const CoreConfig& Simulation::getConfig() const {
+    return this->globalConfig;
+}
+
+bool Simulation::isRunning() const {
+    return this->simulationRunning;
+}
+
+void Simulation::setRunning(bool running) {
+    this->simulationRunning = running;
+}
+
+void Simulation::toggleRunning() {
+    this->simulationRunning = !this->simulationRunning;
+}
+
+double Simulation::getSpeedMultiplier() const {
+    return this->speedMultiplier;
+}
+
+void Simulation::setSpeedMultiplier(double multiplier) {
+    this->speedMultiplier = multiplier > 0.0 ? multiplier : 1.0;
+}
+
+void Simulation::requestStepOnce() {
+    this->stepOnceRequested = true;
+}
+
+double Simulation::getSimTime() const {
+    return this->simTime;
+}
+
+double Simulation::getTimestep() const {
+    return this->timestep;
+}
+
+double Simulation::getLastRenderLatencyMs() const {
+    return this->lastRenderLatencyMs;
+}
+
+double Simulation::getLastSimulationLatencyMs() const {
+    return this->lastSimulationLatencyMs;
+}
+
+double Simulation::getLastOverallLatencyMs() const {
+    return this->lastOverallLatencyMs;
 }
 
 void Simulation::run() {
@@ -16,74 +86,73 @@ void Simulation::run() {
 
     TimePoint iterationStart = std::chrono::high_resolution_clock::now();
 
-    // Initial step and setup for World
     this->clock.step();
     this->world.setup();
 
-    // ====================
-    // Set up render resources
     renderInstance.setup();
-    // ====================
     bool running = true;
 
     while (running)
     {
-        // Update render frame
-        if (!renderInstance.update())
+        if (!renderInstance.update(*this))
         {
             running = false;
             break;
         }
 
-        // SIMULATION LOGIC
+        this->lastRenderLatencyMs = renderInstance.getLastRenderWorkMs();
+        this->lastSimulationLatencyMs = 0.0;
 
-        // Loop rate limitation
+        const TimePoint iterationEnd = std::chrono::high_resolution_clock::now();
 
-        TimePoint iterationEnd = std::chrono::high_resolution_clock::now();
+        const double iterationTime =
+            std::chrono::duration<double>(iterationEnd - iterationStart).count();
 
-        double iterationTime = std::chrono::duration<double>(iterationEnd - iterationStart).count();
+        const bool shouldTick = this->simulationRunning || this->stepOnceRequested;
 
-        if (iterationTime >= this->timestep)
+        if (iterationTime >= this->timestep && shouldTick)
         {
             if (this->globalConfig.DEBUG_CLOCK)
             {
-                std::cout << "Iteration time: " << iterationTime * 1000 << " ms" << std::endl;
+                std::cout << "Loop interval: " << iterationTime * 1000 << " ms" << std::endl;
             }
 
-            iterationStart = std::chrono::high_resolution_clock::now();
+            const TimePoint stepStart = std::chrono::high_resolution_clock::now();
 
-            // Check for simulation processing time
-            TimePoint stepStart = std::chrono::high_resolution_clock::now();
-
-            // Run step for all simulation modules here
             this->world.tick();
+            this->simTime += this->timestep * this->speedMultiplier;
+            this->stepOnceRequested = false;
 
-            TimePoint stepEnd = std::chrono::high_resolution_clock::now();
+            const TimePoint stepEnd = std::chrono::high_resolution_clock::now();
+            this->lastSimulationLatencyMs =
+                std::chrono::duration<double>(stepEnd - stepStart).count() * 1000.0;
+
+            iterationStart = std::chrono::high_resolution_clock::now();
+        }
+        else if (!shouldTick)
+        {
+            iterationStart = iterationEnd;
         }
         else
         {
-
-            std::this_thread::sleep_for(std::chrono::duration<double>((this->timestep - iterationTime) - (this->globalConfig.clockConfig.THREAD_SLEEP_VARIATION_ADJUSTMENT * 1e-3)));
+            std::this_thread::sleep_for(std::chrono::duration<double>(
+                (this->timestep - iterationTime)
+                - (this->globalConfig.clockConfig.threadSleepVariationAdjustment * 1e-3)));
         }
+
+        this->lastOverallLatencyMs = iterationTime * 1000;
 
         if (this->globalConfig.DEBUG_CLOCK)
         {
-            // Check for 1 ms deviation from expected timestep and log a warning if the simulation is lagging behind
-            if (iterationTime - this->timestep > this->globalConfig.clockConfig.warningThreshold * 1e-3)
+            const double targetMs = this->timestep * 1000.0;
+            const double warningThresholdMs = this->globalConfig.clockConfig.warningThreshold;
+            if (this->lastOverallLatencyMs > targetMs + warningThresholdMs)
             {
-                std::cout << "WARNING || Simulation step took longer than target timestep. Currently lagging behind by " << (iterationTime - this->timestep) * 1000 << " ms" << std::endl;
+                std::cout << "WARNING || Overall latency exceeded target timestep. Over by "
+                    << (this->lastOverallLatencyMs - targetMs) << " ms" << std::endl;
             }
         }
     }
+
+    renderInstance.close();
 }
-
-
-
-
-//     // Initial setup
-//     this->setup();
-
-//     while (true)
-//     {
-//         
-//     }

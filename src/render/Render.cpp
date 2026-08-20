@@ -1,5 +1,9 @@
 #include "render/Render.hpp"
 #include "Resources.hpp"
+#include "Simulation.hpp"
+#include "ui/DebugPanels.hpp"
+
+#include <chrono>
 
 float  render::Render::pxFromPt(float pt, float dpi) {
     // With 96 DPI: px = pt * DPI / 72. ~ px = pt * 4/3
@@ -54,7 +58,13 @@ void render::Render::setup() {
     ImGui::CreateContext();
 
     // Window and ImGui context created.
+    std::cout << "Window and ImGui context created.";
     std::cout << "Base (executable) directory: " << this->executableDirectory << std::endl;
+
+    ImGui::StyleColorsLight();
+    // ImGui::StyleColorsDark();
+    
+    std::cout << "Set background to light theme.";
 
     // IO Settings
     std::cout << "Loading fonts...\n" << std::endl;
@@ -69,13 +79,19 @@ void render::Render::setup() {
     std::cout << "Resource directory: " << this->resourcesPath << std::endl;
     // =============
 
-    ImGui::StyleColorsDark();
-
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    ui::LogBuffer::instance().add("Transit Engine initialized.");
 }
 
-bool render::Render::update() {
+double render::Render::getLastRenderWorkMs() const {
+    return this->lastRenderWorkMs;
+}
+
+bool render::Render::update(Simulation& simulation) {
+    const auto renderWorkStart = std::chrono::high_resolution_clock::now();
+
     SDL_Event event;
 
     while (SDL_PollEvent(&event))
@@ -90,36 +106,10 @@ bool render::Render::update() {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    // ============
-    // UI Elements
-    // ============
+    bool showPopupManageVehicles = false;
 
-    ImGui::Begin("Transit Engine");
-
-    ImGui::Text("Hello World!");
-
-    if (ImGui::Button("Pause"))
+    if (ImGui::BeginMainMenuBar())
     {
-    }
-
-    ImGui::End();
-
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-
-    ImGui::SetNextWindowPos(viewport->Pos);
-    ImGui::SetNextWindowSize(
-        ImVec2(viewport->Size.x, 40)
-    );
-
-    ImGuiWindowFlags flags =
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoCollapse;
-
-    ImGui::BeginMainMenuBar();
-
     if (ImGui::BeginMenu("About"))
     {
         if (ImGui::MenuItem("About Transit Engine"))
@@ -139,27 +129,43 @@ bool render::Render::update() {
     {
         if (ImGui::MenuItem("Start / Resume"))
         {
-            // start simulation
+            simulation.setRunning(true);
+            ui::LogBuffer::instance().add("Simulation started from menu.");
         }
 
         if (ImGui::MenuItem("Pause"))
         {
-            // Pause
+            simulation.setRunning(false);
+            ui::LogBuffer::instance().add("Simulation paused from menu.");
         }
 
         if (ImGui::BeginMenu("Simulation Rate"))
         {
+            if (ImGui::MenuItem("0.25x"))
+            {
+                simulation.setSpeedMultiplier(0.25);
+            }
+
             if (ImGui::MenuItem("1x"))
             {
-                // Set simulation speed to 1x;
+                simulation.setSpeedMultiplier(1.0);
             }
 
             if (ImGui::MenuItem("2x"))
             {
-                // Set simulation speed to 2x;
+                simulation.setSpeedMultiplier(2.0);
+            }
+
+            if (ImGui::MenuItem("4x"))
+            {
+                simulation.setSpeedMultiplier(4.0);
             }
 
             ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("Manage Vehicles")) {
+            showPopupManageVehicles = true;
         }
 
         ImGui::EndMenu();
@@ -168,19 +174,6 @@ bool render::Render::update() {
 
     if (ImGui::BeginMenu("Add"))
     {
-        if (ImGui::BeginMenu("Vehicle"))
-        {
-            if (ImGui::MenuItem("Car")) {}
-            if (ImGui::MenuItem("Truck")) {}
-            if (ImGui::MenuItem("Light Rail")) {}
-            if (ImGui::MenuItem("Subway")) {}
-            if (ImGui::MenuItem("Regional Train")) {}
-            if (ImGui::MenuItem("HSR")) {}
-
-            ImGui::EndMenu();
-        }
-
-
         if (ImGui::BeginMenu("Node"))
         {
             if (ImGui::BeginMenu("NodeMenu")) {
@@ -234,6 +227,36 @@ bool render::Render::update() {
 
 
     ImGui::EndMainMenuBar();
+    }
+
+    ui::drawSimulationControls(simulation);
+    ui::drawVehicleInspector(simulation);
+    ui::drawPerformancePanel(simulation);
+    ui::drawWorldSummary(simulation);
+    ui::drawPhysicalNetworkView(simulation);
+    ui::drawNetworkInspector(simulation);
+    ui::drawLogPanel();
+
+    if (ImGui::BeginPopupModal("Manage Vehicles", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Vehicle management");
+        ImGui::Text("Use the Vehicle Inspector panel to add or remove vehicles.");
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            // Execute reset logic here
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+
+    if (showPopupManageVehicles) {
+        ImGui::OpenPopup("Manage Vehicles");
+    }
 
     ImGui::Render();
 
@@ -245,6 +268,10 @@ bool render::Render::update() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    const auto renderWorkEnd = std::chrono::high_resolution_clock::now();
+    this->lastRenderWorkMs =
+        std::chrono::duration<double>(renderWorkEnd - renderWorkStart).count() * 1000.0;
 
     SDL_GL_SwapWindow(window);
 

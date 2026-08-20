@@ -60,13 +60,13 @@ set(SOURCES
     src/core/World.cpp
     src/core/Clock.cpp
     src/vehicle/Vehicle.cpp
-    src/vehicle/rail/RailVehicle.cpp
     src/cli/display/ProgressBar.cpp
     src/cli/Terminal.cpp
     src/cli/View.cpp
     src/Resources.cpp
     src/Simulation.cpp
     src/render/Render.cpp
+    src/ui/DebugPanels.cpp
     src/network/Slot.cpp
     src/network/SlotMap.cpp
 )

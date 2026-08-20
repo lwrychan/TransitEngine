@@ -8,8 +8,9 @@
 #include <cstdlib>
 #include <string>
 #include <filesystem>
-#include <thread>
 #include <iostream>
+
+class Simulation;
 
 constexpr int WINDOW_WIDTH = 1280;
 constexpr int WINDOW_HEIGHT = 720;
@@ -20,11 +21,13 @@ namespace render {
     class Render {
     public:
         void setup();
-        bool update();
+        bool update(Simulation& simulation);
         void close();
 
         float pxFromPt(float pt, float dpi = 96.0);
         void openURL(const std::string& url);
+
+        double getLastRenderWorkMs() const;
 
     private:
         SDL_GLContext glContext;
@@ -33,5 +36,7 @@ namespace render {
         std::filesystem::path executableDirectory;
         std::filesystem::path resourcesPath;
         std::filesystem::path fontResourcesPath;
+
+        double lastRenderWorkMs = 0.0;
     };
 }
