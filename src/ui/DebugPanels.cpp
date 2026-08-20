@@ -14,10 +14,71 @@ namespace ui
 {
     namespace
     {
-        void setInitialWindowPosition(ImVec2 position, ImVec2 size) {
-            ImGui::SetNextWindowPos(position, ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(size, ImGuiCond_FirstUseEver);
+        struct PanelLayout
+        {
+            ImVec2 simulationPosition;
+            ImVec2 simulationSize;
+            ImVec2 performancePosition;
+            ImVec2 performanceSize;
+            ImVec2 logPosition;
+            ImVec2 logSize;
+            ImVec2 gridPosition;
+            ImVec2 gridSize;
+            ImVec2 vehiclePosition;
+            ImVec2 vehicleSize;
+            ImVec2 worldPosition;
+            ImVec2 worldSize;
+            ImVec2 abstractNetworkPosition;
+            ImVec2 abstractNetworkSize;
+        };
+
+        PanelLayout getPanelLayout() {
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+            const float margin = 10.0f;
+            const float panelGap = 10.0f;
+            const float leftWidth = std::clamp(viewport->WorkSize.x * 0.24f, 260.0f, 320.0f);
+            const float rightWidth = std::clamp(viewport->WorkSize.x * 0.24f, 260.0f, 320.0f);
+            const float contentHeight = std::max(180.0f, viewport->WorkSize.y - margin * 2.0f);
+            const float simulationHeight = std::min(190.0f, contentHeight * 0.30f);
+            const float performanceHeight = std::min(275.0f, contentHeight * 0.42f);
+            const float vehicleHeight = std::min(310.0f, contentHeight * 0.45f);
+            const float worldHeight = std::min(190.0f, contentHeight * 0.28f);
+
+            const float leftX = viewport->WorkPos.x + margin;
+            const float topY = viewport->WorkPos.y + margin;
+            const float rightX = viewport->WorkPos.x + viewport->WorkSize.x - margin - rightWidth;
+            const float gridX = leftX + leftWidth + panelGap;
+            const float gridWidth = std::max(150.0f, rightX - panelGap - gridX);
+
+            const float leftLogY = topY + simulationHeight + panelGap + performanceHeight + panelGap;
+            const float rightAbstractY = topY + vehicleHeight + panelGap + worldHeight + panelGap;
+            const float bottomY = viewport->WorkPos.y + viewport->WorkSize.y - margin;
+
+            return {
+                .simulationPosition = ImVec2(leftX, topY),
+                .simulationSize = ImVec2(leftWidth, simulationHeight),
+                .performancePosition = ImVec2(leftX, topY + simulationHeight + panelGap),
+                .performanceSize = ImVec2(leftWidth, performanceHeight),
+                .logPosition = ImVec2(leftX, leftLogY),
+                .logSize = ImVec2(leftWidth, std::max(100.0f, bottomY - leftLogY)),
+                .gridPosition = ImVec2(gridX, topY),
+                .gridSize = ImVec2(gridWidth, contentHeight),
+                .vehiclePosition = ImVec2(rightX, topY),
+                .vehicleSize = ImVec2(rightWidth, vehicleHeight),
+                .worldPosition = ImVec2(rightX, topY + vehicleHeight + panelGap),
+                .worldSize = ImVec2(rightWidth, worldHeight),
+                .abstractNetworkPosition = ImVec2(rightX, rightAbstractY),
+                .abstractNetworkSize = ImVec2(rightWidth, std::max(100.0f, bottomY - rightAbstractY))
+            };
         }
+
+        void applyPanelLayout(ImVec2 position, ImVec2 size) {
+            ImGui::SetNextWindowPos(position, ImGuiCond_Always);
+            ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+        }
+
+        constexpr ImGuiWindowFlags ResponsivePanelFlags =
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 
         struct PhysicalGridViewState
         {
@@ -207,8 +268,9 @@ namespace ui
     }
 
     void drawSimulationControls(Simulation& simulation) {
-        setInitialWindowPosition(ImVec2(10, 40), ImVec2(300, 190));
-        ImGui::Begin("Simulation Controls");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.simulationPosition, layout.simulationSize);
+        ImGui::Begin("Simulation Controls", nullptr, ResponsivePanelFlags);
 
         const bool running = simulation.isRunning();
         if (running) {
@@ -260,8 +322,9 @@ namespace ui
     }
 
     void drawVehicleInspector(Simulation& simulation) {
-        setInitialWindowPosition(ImVec2(960, 40), ImVec2(310, 310));
-        ImGui::Begin("Vehicle Inspector");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.vehiclePosition, layout.vehicleSize);
+        ImGui::Begin("Vehicle Inspector", nullptr, ResponsivePanelFlags);
 
         core::World& world = simulation.getWorld();
 
@@ -325,8 +388,9 @@ namespace ui
     }
 
     void drawPerformancePanel(Simulation& simulation) {
-        setInitialWindowPosition(ImVec2(10, 240), ImVec2(300, 275));
-        ImGui::Begin("Performance");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.performancePosition, layout.performanceSize);
+        ImGui::Begin("Performance", nullptr, ResponsivePanelFlags);
 
         const double renderLatencyMs = simulation.getLastRenderLatencyMs();
         const double simulationLatencyMs = simulation.getLastSimulationLatencyMs();
@@ -370,8 +434,9 @@ namespace ui
     }
 
     void drawWorldSummary(Simulation& simulation) {
-        setInitialWindowPosition(ImVec2(960, 360), ImVec2(310, 190));
-        ImGui::Begin("World State");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.worldPosition, layout.worldSize);
+        ImGui::Begin("World State", nullptr, ResponsivePanelFlags);
 
         const core::World& world = simulation.getWorld();
 
@@ -389,8 +454,9 @@ namespace ui
     }
 
     void drawPhysicalNetworkView(Simulation& simulation) {
-        setInitialWindowPosition(ImVec2(320, 40), ImVec2(630, 670));
-        ImGui::Begin("Physical Grid");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.gridPosition, layout.gridSize);
+        ImGui::Begin("Physical Grid", nullptr, ResponsivePanelFlags);
 
         const network::PhysicalNetwork& physicalNetwork =
             simulation.getWorld().getPhysicalNetwork();
@@ -508,8 +574,9 @@ namespace ui
 
 
     void drawNetworkInspector(Simulation& simulation) {
-        setInitialWindowPosition(ImVec2(960, 560), ImVec2(310, 150));
-        ImGui::Begin("Abstract Network Inspector");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.abstractNetworkPosition, layout.abstractNetworkSize);
+        ImGui::Begin("Abstract Network Inspector", nullptr, ResponsivePanelFlags);
 
         core::World& world = simulation.getWorld();
 
@@ -573,8 +640,9 @@ namespace ui
 
 
     void drawLogPanel() {
-        setInitialWindowPosition(ImVec2(10, 525), ImVec2(300, 185));
-        ImGui::Begin("Log");
+        const PanelLayout layout = getPanelLayout();
+        applyPanelLayout(layout.logPosition, layout.logSize);
+        ImGui::Begin("Log", nullptr, ResponsivePanelFlags);
 
         if (ImGui::Button("Clear Log")) {
             LogBuffer::instance().clear();
