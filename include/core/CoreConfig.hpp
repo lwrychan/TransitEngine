@@ -23,7 +23,14 @@ struct NetworkConfig{};
 struct GeometryConfig{};
 struct VehicleConfig{};
 struct PhysicsConfig{};
-struct RenderingConfig{};
+struct RenderingConfig
+{
+    // Visible square-map areas used by the physical grid renderer. The corresponding
+    // side lengths are their square roots: 25 m² = 5 m x 5 m, 100 m² = 10 m x 10 m.
+    double minimumGridZoomAreaSquareMeters = 25.0;
+    double maximumGridZoomAreaSquareMeters = 250000.0;
+    double defaultGridZoomAreaSquareMeters = 100.0;
+};
 struct UIConfig{};
 struct CoreConfig
 {

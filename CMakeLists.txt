@@ -66,6 +66,7 @@ set(SOURCES
     src/Resources.cpp
     src/Simulation.cpp
     src/render/Render.cpp
+    src/render/PhysicalGridView.cpp
     src/ui/DebugPanels.cpp
     src/network/Slot.cpp
     src/network/SlotMap.cpp

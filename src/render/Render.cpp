@@ -1,6 +1,7 @@
 #include "render/Render.hpp"
 #include "Resources.hpp"
 #include "Simulation.hpp"
+#include "render/PhysicalGridView.hpp"
 #include "ui/DebugPanels.hpp"
 
 #include <chrono>
@@ -233,7 +234,8 @@ bool render::Render::update(Simulation& simulation) {
     ui::drawVehicleInspector(simulation);
     ui::drawPerformancePanel(simulation);
     ui::drawWorldSummary(simulation);
-    ui::drawPhysicalNetworkView(simulation);
+    render::drawPhysicalGridView(
+        simulation.getWorld().getPhysicalNetwork(), simulation.getConfig().renderingConfig);
     ui::drawNetworkInspector(simulation);
     ui::drawLogPanel();
 

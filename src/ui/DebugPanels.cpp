@@ -2,8 +2,6 @@
 
 #include <imgui.h>
 #include <algorithm>
-#include <cmath>
-#include <cstdio>
 #include <sstream>
 #include <cstring>
 
@@ -22,8 +20,6 @@ namespace ui
             ImVec2 performanceSize;
             ImVec2 logPosition;
             ImVec2 logSize;
-            ImVec2 gridPosition;
-            ImVec2 gridSize;
             ImVec2 vehiclePosition;
             ImVec2 vehicleSize;
             ImVec2 worldPosition;
@@ -47,8 +43,6 @@ namespace ui
             const float leftX = viewport->WorkPos.x + margin;
             const float topY = viewport->WorkPos.y + margin;
             const float rightX = viewport->WorkPos.x + viewport->WorkSize.x - margin - rightWidth;
-            const float gridX = leftX + leftWidth + panelGap;
-            const float gridWidth = std::max(150.0f, rightX - panelGap - gridX);
 
             const float leftLogY = topY + simulationHeight + panelGap + performanceHeight + panelGap;
             const float rightAbstractY = topY + vehicleHeight + panelGap + worldHeight + panelGap;
@@ -61,8 +55,6 @@ namespace ui
                 .performanceSize = ImVec2(leftWidth, performanceHeight),
                 .logPosition = ImVec2(leftX, leftLogY),
                 .logSize = ImVec2(leftWidth, std::max(100.0f, bottomY - leftLogY)),
-                .gridPosition = ImVec2(gridX, topY),
-                .gridSize = ImVec2(gridWidth, contentHeight),
                 .vehiclePosition = ImVec2(rightX, topY),
                 .vehicleSize = ImVec2(rightWidth, vehicleHeight),
                 .worldPosition = ImVec2(rightX, topY + vehicleHeight + panelGap),
@@ -80,16 +72,6 @@ namespace ui
         constexpr ImGuiWindowFlags ResponsivePanelFlags =
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 
-        struct PhysicalGridViewState
-        {
-            float zoom = 1.0f;
-            ImVec2 pan{0.0f, 0.0f};
-        };
-
-        PhysicalGridViewState& getPhysicalGridViewState() {
-            static PhysicalGridViewState state;
-            return state;
-        }
     }
 
     LogBuffer& LogBuffer::instance() {
@@ -452,126 +434,6 @@ namespace ui
 
         ImGui::End();
     }
-
-    void drawPhysicalNetworkView(Simulation& simulation) {
-        const PanelLayout layout = getPanelLayout();
-        applyPanelLayout(layout.gridPosition, layout.gridSize);
-        ImGui::Begin("Physical Grid", nullptr, ResponsivePanelFlags);
-
-        const network::PhysicalNetwork& physicalNetwork =
-            simulation.getWorld().getPhysicalNetwork();
-        const int gridWidth = physicalNetwork.getGridWidth();
-        const int gridHeight = physicalNetwork.getGridHeight();
-
-        ImGui::TextDisabled(
-            "PhysicalNetwork • %d x %d cells • simulation and editor geometry",
-            gridWidth, gridHeight);
-        ImGui::SameLine();
-
-        PhysicalGridViewState& viewState = getPhysicalGridViewState();
-        if (ImGui::SmallButton("Reset View")) {
-            viewState.zoom = 1.0f;
-            viewState.pan = ImVec2(0.0f, 0.0f);
-        }
-        ImGui::Separator();
-
-        const ImVec2 canvasPosition = ImGui::GetCursorScreenPos();
-        const ImVec2 available = ImGui::GetContentRegionAvail();
-        const float padding = 18.0f;
-        const float baseCellSize = std::max(
-            4.0f,
-            std::floor(std::min(
-                (available.x - padding * 2.0f) / static_cast<float>(gridWidth),
-                (available.y - padding * 2.0f) / static_cast<float>(gridHeight))));
-        const float cellSize = baseCellSize * viewState.zoom;
-        const ImVec2 gridSize(
-            cellSize * static_cast<float>(gridWidth),
-            cellSize * static_cast<float>(gridHeight));
-        const ImVec2 gridOrigin(
-            canvasPosition.x + (available.x - gridSize.x) * 0.5f + viewState.pan.x,
-            canvasPosition.y + (available.y - gridSize.y) * 0.5f + viewState.pan.y);
-
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->PushClipRect(
-            canvasPosition,
-            ImVec2(canvasPosition.x + available.x, canvasPosition.y + available.y), true);
-        drawList->AddRectFilled(
-            canvasPosition,
-            ImVec2(canvasPosition.x + available.x, canvasPosition.y + available.y),
-            IM_COL32(246, 248, 250, 255));
-        drawList->AddRectFilled(
-            gridOrigin,
-            ImVec2(gridOrigin.x + gridSize.x, gridOrigin.y + gridSize.y),
-            IM_COL32(255, 255, 255, 255));
-
-        const ImU32 minorGridColour = IM_COL32(218, 224, 231, 255);
-        const ImU32 majorGridColour = IM_COL32(181, 193, 204, 255);
-        for (int x = 0; x <= gridWidth; ++x) {
-            const float position = gridOrigin.x + cellSize * static_cast<float>(x);
-            drawList->AddLine(ImVec2(position, gridOrigin.y),
-                ImVec2(position, gridOrigin.y + gridSize.y),
-                x % 5 == 0 ? majorGridColour : minorGridColour);
-        }
-        for (int y = 0; y <= gridHeight; ++y) {
-            const float position = gridOrigin.y + cellSize * static_cast<float>(y);
-            drawList->AddLine(ImVec2(gridOrigin.x, position),
-                ImVec2(gridOrigin.x + gridSize.x, position),
-                y % 5 == 0 ? majorGridColour : minorGridColour);
-        }
-        drawList->AddRect(gridOrigin,
-            ImVec2(gridOrigin.x + gridSize.x, gridOrigin.y + gridSize.y),
-            IM_COL32(116, 132, 148, 255));
-
-        char zoomLabel[32];
-        std::snprintf(zoomLabel, sizeof(zoomLabel), "Zoom %.0f%%", viewState.zoom * 100.0f);
-        drawList->AddText(
-            ImVec2(canvasPosition.x + 8.0f, canvasPosition.y + 8.0f),
-            IM_COL32(74, 89, 104, 255), zoomLabel);
-        drawList->PopClipRect();
-
-        ImGui::InvisibleButton("PhysicalGridCanvas", available);
-        if (ImGui::IsItemHovered()) {
-            const ImVec2 mouse = ImGui::GetIO().MousePos;
-
-            if (ImGui::GetIO().MouseWheel != 0.0f) {
-                const float oldCellSize = cellSize;
-                const float nextZoom = std::clamp(
-                    viewState.zoom * std::pow(1.15f, ImGui::GetIO().MouseWheel),
-                    0.25f, 8.0f);
-                const float nextCellSize = baseCellSize * nextZoom;
-                const ImVec2 nextGridSize(
-                    nextCellSize * static_cast<float>(gridWidth),
-                    nextCellSize * static_cast<float>(gridHeight));
-                const ImVec2 nextCenteredOrigin(
-                    canvasPosition.x + (available.x - nextGridSize.x) * 0.5f,
-                    canvasPosition.y + (available.y - nextGridSize.y) * 0.5f);
-                const ImVec2 mouseGridPosition(
-                    (mouse.x - gridOrigin.x) / oldCellSize,
-                    (mouse.y - gridOrigin.y) / oldCellSize);
-                viewState.pan = ImVec2(
-                    mouse.x - nextCenteredOrigin.x - mouseGridPosition.x * nextCellSize,
-                    mouse.y - nextCenteredOrigin.y - mouseGridPosition.y * nextCellSize);
-                viewState.zoom = nextZoom;
-            }
-
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
-                const ImVec2 delta = ImGui::GetIO().MouseDelta;
-                viewState.pan.x += delta.x;
-                viewState.pan.y += delta.y;
-            }
-
-            const int cellX = static_cast<int>((mouse.x - gridOrigin.x) / cellSize);
-            const int cellY = static_cast<int>((mouse.y - gridOrigin.y) / cellSize);
-            if (cellX >= 0 && cellX < gridWidth && cellY >= 0 && cellY < gridHeight) {
-                ImGui::SetTooltip(
-                    "Grid cell (%d, %d)\nScroll to zoom • middle-drag to pan\n"
-                    "Track and obstruction tools will edit this layer.", cellX, cellY);
-            }
-        }
-
-        ImGui::End();
-    }
-
 
     void drawNetworkInspector(Simulation& simulation) {
         const PanelLayout layout = getPanelLayout();

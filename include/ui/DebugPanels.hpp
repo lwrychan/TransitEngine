@@ -36,7 +36,6 @@ namespace ui
     void drawVehicleInspector(Simulation& simulation);
     void drawPerformancePanel(Simulation& simulation);
     void drawWorldSummary(Simulation& simulation);
-    void drawPhysicalNetworkView(Simulation& simulation);
     void drawNetworkInspector(Simulation& simulation);
     void drawLogPanel();
 }

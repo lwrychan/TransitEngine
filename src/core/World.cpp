@@ -10,7 +10,8 @@
 #include <utility>
 
 core::World::World(const CoreConfig& config)
-    : globalConfig(config) {
+    : globalConfig(config),
+      physicalNetwork(abstractNetwork) {
 }
 
 network::AbstractNetwork& core::World::getAbstractNetwork()
