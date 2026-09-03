@@ -625,23 +625,6 @@ void drawRouteControls(core::World& world)
         ImGui::EndDisabled();
     }
     ImGui::SameLine();
-    const bool routeIsClosed =
-        routeNodes.size() >= 3 && sameNode(routeNodes.front(), routeNodes.back());
-    if (routeNodes.size() >= 2)
-    {
-        if (routeIsClosed)
-        {
-            if (whiteButton("Open Loop"))
-            {
-                routeNodes.pop_back();
-            }
-        }
-        else if (whiteButton("Close Loop"))
-        {
-            routeNodes.push_back(routeNodes.front());
-        }
-    }
-    ImGui::SameLine();
     if (whiteButton("Clear"))
         routeNodes.clear();
     ImGui::End();

@@ -16,37 +16,47 @@ enum class ToolIcon
     Route
 };
 
-void drawToolIcon(ImDrawList& drawList, const ImRect& bounds, ToolIcon icon)
+constexpr float ToolButtonSize = 32.0f;
+constexpr float ToolBarHeight = 40.0f;
+
+// Lucide: MousePointer2, CircleDot, and Route. Rendered as paths to avoid a font dependency.
+void drawToolIcon(ImDrawList& drawList, ImVec2 minimum, ImVec2 maximum, ToolIcon icon)
 {
     const ImU32 color = IM_COL32(255, 255, 255, 255);
-    const ImVec2 center((bounds.Min.x + bounds.Max.x) * 0.5f, (bounds.Min.y + bounds.Max.y) * 0.5f);
+    const ImVec2 center((minimum.x + maximum.x) * 0.5f, (minimum.y + maximum.y) * 0.5f);
 
     switch (icon)
     {
     case ToolIcon::MousePointer:
     {
-        const ImVec2 pointer[] = {
-            {center.x - 7.0f, center.y - 9.0f}, {center.x - 7.0f, center.y + 7.0f},
-            {center.x - 2.0f, center.y + 3.0f}, {center.x + 3.0f, center.y + 10.0f},
-            {center.x + 6.0f, center.y + 8.0f}, {center.x + 1.0f, center.y + 1.0f},
-            {center.x + 9.0f, center.y - 1.0f}, {center.x - 7.0f, center.y - 9.0f}};
+        const ImVec2 pointer[] = {{center.x - 6.0f, center.y - 6.0f},
+                                  {center.x - 0.7f, center.y + 6.75f},
+                                  {center.x + 1.18f, center.y + 1.21f},
+                                  {center.x + 6.75f, center.y - 0.7f}};
         drawList.AddPolyline(pointer, IM_ARRAYSIZE(pointer), color, ImDrawFlags_Closed, 1.7f);
+        drawList.AddLine({center.x + 0.75f, center.y + 0.75f}, {center.x + 5.25f, center.y + 5.25f},
+                         color, 1.7f);
         break;
     }
     case ToolIcon::CircleDot:
-        drawList.AddCircle(center, 7.0f, color, 16, 1.7f);
-        drawList.AddCircleFilled(center, 2.5f, color, 12);
+        drawList.AddCircle(center, 7.5f, color, 16, 1.7f);
+        drawList.AddCircleFilled(center, 1.5f, color, 12);
         break;
     case ToolIcon::Route:
     {
-        const ImVec2 start(center.x - 8.0f, center.y + 6.0f);
-        const ImVec2 turn(center.x - 1.5f, center.y - 4.0f);
-        const ImVec2 end(center.x + 8.0f, center.y + 2.0f);
-        drawList.AddLine(start, turn, color, 1.7f);
-        drawList.AddLine(turn, end, color, 1.7f);
-        drawList.AddCircleFilled(start, 2.5f, color, 12);
-        drawList.AddCircleFilled(turn, 2.5f, color, 12);
-        drawList.AddCircleFilled(end, 2.5f, color, 12);
+        const ImVec2 start(center.x - 4.5f, center.y + 5.25f);
+        const ImVec2 end(center.x + 4.5f, center.y - 5.25f);
+        drawList.AddLine({start.x + 2.25f, start.y}, {center.x + 2.625f, start.y}, color, 1.7f);
+        drawList.AddBezierCubic({center.x + 2.625f, start.y}, {center.x + 7.875f, start.y},
+                                {center.x + 7.875f, center.y}, {center.x + 2.625f, center.y}, color,
+                                1.7f);
+        drawList.AddLine({center.x + 2.625f, center.y}, {center.x - 4.5f, center.y}, color, 1.7f);
+        drawList.AddBezierCubic({center.x - 4.5f, center.y}, {center.x - 9.75f, center.y},
+                                {center.x - 9.75f, center.y - 5.25f},
+                                {center.x - 4.5f, center.y - 5.25f}, color, 1.7f);
+        drawList.AddLine({center.x - 4.5f, center.y - 5.25f}, {end.x - 2.25f, end.y}, color, 1.7f);
+        drawList.AddCircle(start, 2.25f, color, 12, 1.7f);
+        drawList.AddCircle(end, 2.25f, color, 12, 1.7f);
         break;
     }
     }
@@ -59,14 +69,14 @@ bool toolButton(const char* id, ToolIcon icon, bool selected, const char* toolti
         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
     }
 
-    const bool clicked = ImGui::Button(id, {32.0f, 28.0f});
+    const bool clicked = ImGui::Button(id, {ToolButtonSize, ToolButtonSize});
     if (selected)
     {
         ImGui::PopStyleColor();
     }
 
-    drawToolIcon(*ImGui::GetWindowDrawList(),
-                 ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()), icon);
+    drawToolIcon(*ImGui::GetWindowDrawList(), ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+                 icon);
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip("%s", tooltip);
@@ -94,14 +104,15 @@ void render::Render::drawToolBar()
 {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float menuHeight = ImGui::GetFrameHeight();
-    constexpr float toolbarHeight = 40.0f;
+    constexpr float verticalPadding = (ToolBarHeight - ToolButtonSize) * 0.5f;
 
     ImGui::SetNextWindowPos(
         ImVec2(viewport->WorkPos.x + 10.0f, viewport->WorkPos.y + menuHeight + 1.0f),
         ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(std::max(180.0f, viewport->WorkSize.x - 20.0f), toolbarHeight),
+    ImGui::SetNextWindowSize(ImVec2(std::max(180.0f, viewport->WorkSize.x - 20.0f), ToolBarHeight),
                              ImGuiCond_Always);
 
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, verticalPadding));
     ImGui::Begin("Tools", nullptr,
                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar |
                      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
@@ -126,6 +137,7 @@ void render::Render::drawToolBar()
     }
 
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 float render::Render::pxFromPt(float pt, float dpi)
@@ -354,13 +366,14 @@ bool render::Render::update(Simulation& simulation)
     }
 
     ui::drawEditorDialogs(simulation);
+    // These are normal editor controls, not diagnostics.
+    ui::drawSimulationControls(simulation);
+    ui::drawEditorPanel(simulation);
     if (debugView)
     {
-        ui::drawSimulationControls(simulation);
         ui::drawDebugViewer(simulation);
         ui::drawPerformancePanel(simulation);
         ui::drawWorldSummary(simulation);
-        ui::drawEditorPanel(simulation);
         ui::drawLogPanel();
     }
     const bool modalOpen = ui::isModalOpen() || ui::isRouteModalOpen() || showPopupManageVehicles ||
