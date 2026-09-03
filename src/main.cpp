@@ -1,19 +1,20 @@
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
+#include "Simulation.hpp"
+#include "cli/Terminal.hpp"
+#include "cli/display/ProgressBar.hpp"
 #include "core/CoreConfig.hpp"
 #include "core/World.hpp"
 #include "vehicle/Vehicle.hpp"
-#include "cli/Terminal.hpp"
-#include "cli/display/ProgressBar.hpp"
-#include "Simulation.hpp"
 
 using namespace core;
 
 using ProgressBar = cli::display::ProgressBar;
 
-void simulationStartPrint() {
+void simulationStartPrint()
+{
     cli::Terminal::clearScreen();
 
     std::cout << "Starting simulation..." << std::endl;

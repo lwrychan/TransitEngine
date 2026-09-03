@@ -2,15 +2,18 @@
 
 #include "cli/Terminal.hpp"
 
-void cli::Terminal::moveCursorToStart() {
+void cli::Terminal::moveCursorToStart()
+{
     std::cout << cli::Terminal::CURSOR_START;
 }
 
-void cli::Terminal::moveCursorUp(int lineCount) {
+void cli::Terminal::moveCursorUp(int lineCount)
+{
     std::cout << "\033[" << lineCount << "A";
 }
 
-void cli::Terminal::moveCursorDown(int lineCount) {
+void cli::Terminal::moveCursorDown(int lineCount)
+{
     std::cout << "\033[" << lineCount << "B";
 }
 

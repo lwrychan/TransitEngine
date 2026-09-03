@@ -1,5 +1,6 @@
 #include "Resources.hpp"
-Resources::Resources() {
+Resources::Resources()
+{
 #ifdef _WIN32
     this->baseDirectory = "resources/";
 #elif __APPLE__

@@ -3,12 +3,11 @@
 #include <functional>
 #include <vector>
 
-#include "Slot.hpp"
 #include "Identifiers.hpp"
+#include "Slot.hpp"
 
-
-template<typename ItemType, typename ItemIdType>
-class SlotMap {
+template <typename ItemType, typename ItemIdType> class SlotMap
+{
 public:
     void clear(size_t index);
 

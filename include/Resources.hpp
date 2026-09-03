@@ -2,7 +2,8 @@
 
 #include <string>
 
-class Resources {
+class Resources
+{
 public:
     Resources();
 
@@ -11,5 +12,4 @@ public:
     std::string baseDirectory;
 
 private:
-    
 };

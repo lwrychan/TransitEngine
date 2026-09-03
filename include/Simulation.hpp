@@ -3,7 +3,8 @@
 #include "core/CoreConfig.hpp"
 #include "core/World.hpp"
 
-class Simulation {
+class Simulation
+{
 public:
     Simulation(const CoreConfig& config);
 

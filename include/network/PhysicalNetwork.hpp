@@ -10,38 +10,47 @@
 
 namespace network
 {
-    // The real-world shape of one abstract segment, expressed in metres.
-    struct PhysicalSegmentGeometry
+// The real-world shape of one abstract segment, expressed in metres.
+struct PhysicalSegmentGeometry
+{
+    AbstractSegmentId abstractSegmentId{-1, -1};
+    std::vector<PhysicalCoordinate> path;
+};
+
+// Physical projection of AbstractNetwork: identical topology plus real track geometry.
+class PhysicalNetwork
+{
+public:
+    explicit PhysicalNetwork(const AbstractNetwork& abstractNetwork)
+        : abstractNetwork(&abstractNetwork)
     {
-        AbstractSegmentId abstractSegmentId{-1, -1};
-        std::vector<PhysicalCoordinate> path;
-    };
+    }
 
-    // Physical projection of AbstractNetwork: identical topology plus real track geometry.
-    class PhysicalNetwork
+    const AbstractNetwork& getAbstractNetwork() const
     {
-    public:
-        explicit PhysicalNetwork(const AbstractNetwork& abstractNetwork)
-            : abstractNetwork(&abstractNetwork) {}
+        return *abstractNetwork;
+    }
+    const std::vector<PhysicalSegmentGeometry>& getSegmentGeometries() const
+    {
+        return segmentGeometries;
+    }
 
-        const AbstractNetwork& getAbstractNetwork() const { return *abstractNetwork; }
-        const std::vector<PhysicalSegmentGeometry>& getSegmentGeometries() const {
-            return segmentGeometries;
-        }
-
-        void setSegmentGeometry(AbstractSegmentId segmentId, std::vector<PhysicalCoordinate> path) {
-            for (PhysicalSegmentGeometry& geometry : segmentGeometries) {
-                if (geometry.abstractSegmentId.id == segmentId.id
-                    && geometry.abstractSegmentId.generation == segmentId.generation) {
-                    geometry.path = std::move(path);
-                    return;
-                }
+    void setSegmentGeometry(AbstractSegmentId segmentId, std::vector<PhysicalCoordinate> path)
+    {
+        for (PhysicalSegmentGeometry& geometry : segmentGeometries)
+        {
+            if (geometry.abstractSegmentId.id == segmentId.id &&
+                geometry.abstractSegmentId.generation == segmentId.generation)
+            {
+                geometry.path = std::move(path);
+                return;
             }
-            segmentGeometries.push_back({segmentId, std::move(path)});
         }
+        segmentGeometries.push_back({segmentId, std::move(path)});
+    }
 
-    private:
-        const AbstractNetwork* abstractNetwork;
-        std::vector<PhysicalSegmentGeometry> segmentGeometries;
-    };
-}
+private:
+    const AbstractNetwork* abstractNetwork;
+    std::vector<PhysicalSegmentGeometry> segmentGeometries;
+};
+} // namespace network

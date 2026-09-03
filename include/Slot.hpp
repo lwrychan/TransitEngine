@@ -1,7 +1,7 @@
 #pragma once
 
-template<typename ItemType>
-class Slot {
+template <typename ItemType> class Slot
+{
 public:
     Slot() = default;
 
@@ -12,6 +12,7 @@ public:
     unsigned int getGeneration();
     unsigned int getGeneration() const;
     void setGeneration(unsigned int generation);
+
 private:
     ItemType item;
     unsigned int generation = 0;

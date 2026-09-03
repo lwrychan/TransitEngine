@@ -1,27 +1,19 @@
-# ========================
-# Setup
-# ========================
-
 cmake_minimum_required(VERSION 3.28)
 
 project(TransitEngine)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
 
-
-# ========================
-# Dependencies
-# ========================
-
-FetchContent_Declare( # Define dependency
+FetchContent_Declare(
     SDL2
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
     GIT_TAG release-2.32.10
 )
-FetchContent_MakeAvailable(SDL2) # Download SDL2
+FetchContent_MakeAvailable(SDL2)
 
 FetchContent_Declare(
     imgui
@@ -51,10 +43,6 @@ target_link_libraries(imgui PUBLIC
 
 find_package(OpenGL REQUIRED)
 
-
-# ========================
-# Executables
-# ========================
 set(SOURCES
     src/main.cpp
     src/core/World.cpp
@@ -65,7 +53,12 @@ set(SOURCES
     src/Resources.cpp
     src/Simulation.cpp
     src/render/Render.cpp
-    src/render/PhysicalGridView.cpp
+    src/render/grid/GridBackdrop.cpp
+    src/render/grid/GridCamera.cpp
+    src/render/grid/GridInteraction.cpp
+    src/render/grid/GridLabels.cpp
+    src/render/grid/GridScene.cpp
+    src/render/grid/PhysicalGrid.cpp
     src/ui/DebugPanels.cpp
     src/network/Slot.cpp
     src/network/SlotMap.cpp
@@ -112,7 +105,6 @@ if(APPLE)
 
     set_target_properties(TransitEngine PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_ICON_FILE "transit-engine-icon-1024.icns"
         MACOSX_BUNDLE_BUNDLE_NAME "TransitEngine"
         MACOSX_BUNDLE_ICON_FILE "transit-engine-icon-1024.icns"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.lwrychan.transitengine"

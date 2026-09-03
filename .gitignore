@@ -49,3 +49,5 @@ graphify-out/
 .codex/
 
 AGENTS.md
+
+.clang-format

@@ -3,67 +3,63 @@
 #include <string>
 #include <vector>
 
-#include "Simulation.hpp"
-#include "network/PhysicalCoordinate.hpp"
-#include "network/AbstractRoute.hpp"
 #include "Identifiers.hpp"
+#include "Simulation.hpp"
+#include "network/AbstractRoute.hpp"
+#include "network/PhysicalCoordinate.hpp"
 
 namespace ui
 {
-    class LogBuffer
-    {
-    public:
-        static LogBuffer& instance();
+class LogBuffer
+{
+public:
+    static LogBuffer& instance();
 
-        void add(const std::string& message);
-        void clear();
-        const std::vector<std::string>& getLines() const;
+    void add(const std::string& message);
+    void clear();
+    const std::vector<std::string>& getLines() const;
 
-    private:
-        static constexpr size_t MAX_LINES = 200;
-        std::vector<std::string> lines;
-    };
+private:
+    static constexpr size_t MAX_LINES = 200;
+    std::vector<std::string> lines;
+};
 
-    struct VehicleCreationDraft
-    {
-        char displayName[64] = "New Vehicle";
-        float maxSpeedKph = 80.0f;
-        float accelerationKphPerSecond = 15.0f;
-        float decelerationKphPerSecond = 15.0f;
-        int passengerCapacity = 100;
-    };
+struct VehicleCreationDraft
+{
+    char displayName[64] = "New Vehicle";
+    float maxSpeedKph = 80.0f;
+    float accelerationKphPerSecond = 15.0f;
+    float decelerationKphPerSecond = 15.0f;
+    int passengerCapacity = 100;
+};
 
-    VehicleCreationDraft& getVehicleCreationDraft();
-    void requestVehicleCreation();
+VehicleCreationDraft& getVehicleCreationDraft();
+void requestVehicleCreation();
 
-    void requestNodeCreation(const network::PhysicalCoordinate& coordinate);
-    void requestNodeEdit(core::World& world, AbstractNodeId node);
-    void requestNodeEdit(
-        core::World& world,
-        AbstractNodeId node,
-        const network::PhysicalCoordinate& coordinate);
-    void requestNodeMove(
-        core::World& world,
-        AbstractNodeId node,
-        const network::PhysicalCoordinate& coordinate);
-    void toggleRouteNode(AbstractNodeId node);
-    bool isRouteNodeSelected(AbstractNodeId node);
-    const std::vector<AbstractNodeId>& getRouteSelectionNodes();
-    network::RouteColor getRouteDraftColor();
-    void requestRouteSave();
-    void requestRouteEdit(core::World& world, AbstractRouteId route);
-    bool isRouteModalOpen();
-    void drawRouteControls(core::World& world);
-    bool isModalOpen();
-    bool shouldShowVehicleSpeeds();
-    void drawEditorDialogs(Simulation& simulation);
-    void drawDeleteConfirmation(core::World& world);
-    void drawNodeMoveConfirmation(core::World& world);
+void requestNodeCreation(const network::PhysicalCoordinate& coordinate);
+void requestNodeEdit(core::World& world, AbstractNodeId node);
+void requestNodeEdit(core::World& world, AbstractNodeId node,
+                     const network::PhysicalCoordinate& coordinate);
+void requestNodeMove(core::World& world, AbstractNodeId node,
+                     const network::PhysicalCoordinate& coordinate);
+void toggleRouteNode(AbstractNodeId node);
+bool isRouteNodeSelected(AbstractNodeId node);
+const std::vector<AbstractNodeId>& getRouteSelectionNodes();
+network::RouteColor getRouteDraftColor();
+void requestRouteSave();
+void requestRouteEdit(core::World& world, AbstractRouteId route);
+bool isRouteModalOpen();
+void drawRouteControls(core::World& world);
+bool isModalOpen();
+bool shouldShowVehicleSpeeds();
+void drawEditorDialogs(Simulation& simulation);
+void drawDeleteConfirmation(core::World& world);
+void drawNodeMoveConfirmation(core::World& world);
 
-    void drawSimulationControls(Simulation& simulation);
-    void drawDebugViewer(Simulation& simulation);
-    void drawPerformancePanel(Simulation& simulation);
-    void drawWorldSummary(Simulation& simulation);
-    void drawEditorPanel(Simulation& simulation);
-    void drawLogPanel();
-}
+void drawSimulationControls(Simulation& simulation);
+void drawDebugViewer(Simulation& simulation);
+void drawPerformancePanel(Simulation& simulation);
+void drawWorldSummary(Simulation& simulation);
+void drawEditorPanel(Simulation& simulation);
+void drawLogPanel();
+} // namespace ui

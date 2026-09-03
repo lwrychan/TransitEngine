@@ -1,7 +1,7 @@
 #pragma once
 
-template<typename Identifier>
-struct Id {
+template <typename Identifier> struct Id
+{
     int id;
     int generation;
 };

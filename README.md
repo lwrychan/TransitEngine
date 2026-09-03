@@ -1,119 +1,159 @@
 # TransitEngine
 
-TransitEngine is a C++23 desktop prototype for editing a small transit network and simulating vehicles moving along its routes. It uses SDL2, OpenGL, and Dear ImGui to combine an interactive physical-grid editor with a fixed-timestep simulation loop.
+TransitEngine is a C++23 desktop prototype for building small transit networks and simulating
+vehicles on them. SDL2, OpenGL, and Dear ImGui provide an interactive physical-grid editor;
+the simulation advances the editable world at a fixed rate.
 
-The project is currently an editor and simulation foundation, not a complete transit-planning application. This document distinguishes what works today from the planned architecture and features.
+It is an editor and simulation foundation, not yet a full transit-planning application. The
+sections below distinguish implemented behavior from the planned architecture.
 
 ## First-time setup and run
 
-Requirements: CMake 3.28 or newer, a C++23 compiler, Git (for CMake FetchContent), and an OpenGL-capable system.
+Requirements: CMake 3.28 or newer, a C++23 compiler, Git (for CMake `FetchContent`), and an
+OpenGL-capable system.
 
 ```sh
 cmake -S . -B build
 cmake --build build
 ```
 
-On macOS, CMake builds an application bundle; launch `build/TransitEngine.app`. On other platforms, run the generated `TransitEngine` executable from the build directory.
+On macOS, CMake produces `build/TransitEngine.app`. On other platforms, run the generated
+`TransitEngine` executable from the build directory.
 
-CMake downloads SDL2 2.32.10 and Dear ImGui 1.92.9 during configuration, then copies `resources/` beside or inside the resulting application.
+Configuration downloads SDL2 2.32.10 and Dear ImGui 1.92.9, then copies `resources/` beside
+or inside the application bundle.
 
 ## Current implementation
 
-### Interactive editor
+### Editor
 
-The application opens a resizable physical-grid map measured in metres. The view can be panned with the pointer tool and zoomed with the mouse wheel; the grid adapts its detail and has configurable minimum, maximum, and default visible areas.
+The main view is a resizable, metre-based physical grid. It supports mouse-wheel zoom, middle-
+mouse panning, adaptive grid detail, a scale bar, and configurable visible-area limits.
 
-- Create physical nodes by selecting the **Node** tool and clicking a grid point. The cursor snaps to grid intersections while the tool is active.
-- Name and classify nodes as generic nodes, rail stations, bus stops, or road intersections; edit, move, select, and delete them through dialogs.
-- Create routes from an ordered selection of existing nodes, select them on the map, edit their name, node sequence, and color, or delete them with confirmation.
-- Render route polylines, route labels, station labels, selection rings, and vehicle markers on the physical grid.
-- Create vehicles with a display name, maximum speed, acceleration, deceleration, and capacity. Assign existing vehicles to routes and edit their stopping pattern and dwell time.
+- **Pointer** selects, edits, and moves nodes; it also selects and edits routes.
+- **Node** snaps the cursor to metre intersections and opens a creation dialog on click.
+- **Route** creates an ordered route from selected existing nodes. Routes have names, colors,
+  editable node sequences, labels, and confirmed deletion.
+- Nodes have a logical `AbstractNode` and matching coordinate-bearing `PhysicalNode`. They can
+  be named and classified as generic nodes, rail stations, bus stops, or road intersections.
+- Labels avoid route geometry and other placed labels where possible. Selected and route-selected
+  nodes use distinct highlight rings.
 
 ### Simulation
 
-`Simulation` owns the main SDL/ImGui render loop and advances `core::World` at a configurable fixed timestep (120 FPS by default) when the simulation is running or a single step is requested.
+`Simulation` owns the SDL/ImGui frame loop. While running, it accumulates wall-clock time and
+executes every required fixed simulation tick (120 Hz by default). At 1× speed, simulation time
+therefore tracks elapsed real time; a speed multiplier scales simulated time without changing the
+tick cadence.
 
-- Simulation speed can be paused, stepped, or scaled from the UI.
-- Each vehicle travels in real-world metres, accelerates toward its operating-speed limit, and brakes for its next stopping control point.
-- Stopped vehicles dwell for the configured time. Default stop templates include local service (every route node) and express service (endpoints), with per-stop editing.
-- Vehicles traverse multi-node routes. Open routes reverse direction at their ends; a route whose first and last node are the same is treated as a closed loop.
-- Vehicle speed can be inspected on hover or shown persistently from the debug UI.
+- Vehicles are created with a display name, maximum operating speed, acceleration, deceleration,
+  and passenger capacity.
+- A vehicle can be assigned to an existing route and configured with local or endpoint service,
+  then edited to select stops and dwell times per stop.
+- Vehicle motion uses metre distances. It accelerates to the operating limit and uses braking
+  distance to decelerate for the next stop or route end.
+- Open routes reverse direction at their ends. Routes whose first and last nodes match are treated
+  as closed loops.
+- The grid draws direction-aligned vehicle markers. Hovering one shows its current speed; the
+  debug view can keep speeds visible.
 
-The debug view is optional and contains simulation controls, world counts, latency diagnostics, the editor inspector, and an event log. The normal view retains the map, toolbar, menus, and necessary creation/edit dialogs.
+The optional debug view provides simulation controls, world counts, editor controls, logs, and
+latency diagnostics. Render and simulation work are reported separately; overall latency is the
+wall-clock frame duration and may include intentional frame pacing.
 
-### Current data model
+## Architecture
 
-The naming separates logical topology from projections that will represent it differently:
+```text
+main
+  └─ Simulation
+       ├─ core::World              editable runtime state and simulation rules
+       │   ├─ logical nodes, routes, segments, and vehicles (generation-safe SlotMaps)
+       │   ├─ PhysicalNode records (type and metre coordinates)
+       │   ├─ AbstractNetwork      logical-topology boundary
+       │   ├─ PhysicalNetwork      physical-segment-geometry boundary
+       │   └─ MapNetwork           future schematic-projection boundary
+       └─ render::Render
+            ├─ menus, toolbar, normal/debug layout, and ImGui lifecycle
+            ├─ ui::DebugPanels     creation/edit dialogs and diagnostics
+            └─ render::grid
+                 ├─ PhysicalGrid   grid panel composition and camera lifetime
+                 ├─ GridCamera     world/screen transforms, panning, and zoom
+                 ├─ GridBackdrop   adaptive grid and scale bar
+                 ├─ GridInteraction tool input and drag behavior
+                 ├─ GridScene      routes, nodes, vehicles, hover targets
+                 └─ GridLabels     readable unrotated and rotated labels
+```
+
+### Network layers
+
+The model deliberately separates logical topology from its visual projections:
 
 ```text
 AbstractNode / AbstractSegment / AbstractRoute
-        logical topology; no physical coordinates on AbstractNode
+        geometry-free logical relationships
                          |
-                         +--> PhysicalNetwork / PhysicalNode
-                         |    real-world geometry in metres
-                         |
-                         +--> MapNetwork
-                              future diagrammatic (metro-map) projection
+          +--------------+--------------+
+          |                             |
+PhysicalNetwork                  MapNetwork
+real-world track geometry        future distorted schematic geometry
+in metres                        for a metro-style map
 ```
 
-Today, `core::World` is the owner of the editable runtime state. It keeps active nodes, routes, and vehicles in generation-safe `SlotMap` containers; it also owns a segment container reserved for the upcoming segment-generation path. Matching `PhysicalNode` objects hold node type and coordinates. The current grid draws straight lines between the physical coordinates of the nodes in each route, and vehicle positions are interpolated along those lines.
-
-`AbstractNetwork`, `PhysicalNetwork`, and `MapNetwork` define the intended boundaries, but they are not yet the sole populated source of editor data: `PhysicalNetwork` currently only provides storage for future per-segment geometry, and `MapNetwork` is an empty placeholder. This is deliberate unfinished work, listed below, rather than functionality already supplied by the editor.
+`AbstractNode` intentionally has no coordinate. `PhysicalNode` supplies the current editor's
+node type and real-world coordinate. Today, `core::World` is the practical owner of the editable
+node, route, vehicle, and physical-node containers. `AbstractNetwork` and `PhysicalNetwork`
+express the intended boundary, but are not yet the canonical populated store: routes currently
+contain ordered node IDs, their displayed geometry is straight node-to-node lines, and physical
+segment geometry is reserved for the next implementation stage. `MapNetwork` is a placeholder.
 
 ### Source layout
 
 ```text
 include/
-  core/       configuration and World, the runtime owner
-  network/    abstract topology, physical nodes/geometry, map projection boundary
-  render/     SDL/OpenGL/ImGui renderer and physical-grid view
-  ui/         editor dialogs, debug panels, shared UI styling
-  vehicle/    vehicle state and movement model
-  cli/        terminal helpers retained from the early prototype
-src/          implementations matching the modules above
-resources/    fonts and application assets
+  core/          configuration and World
+  network/       abstract topology and physical/map projection boundaries
+  render/        SDL/OpenGL/ImGui renderer, tools, and modular grid renderer
+  render/grid/   camera, backdrop, interactions, scene, labels, and panel composition
+  ui/            dialogs, diagnostics, and shared styling
+  vehicle/       vehicle state and movement model
+  cli/           early terminal helper code
+src/             implementations mirroring include/
+resources/       fonts and application assets
 ```
 
-Key entry points are `src/main.cpp`, `src/Simulation.cpp`, `src/core/World.cpp`, `src/render/Render.cpp`, `src/render/PhysicalGridView.cpp`, and `src/ui/DebugPanels.cpp`.
+Primary entry points are `src/main.cpp`, `src/Simulation.cpp`, `src/core/World.cpp`,
+`src/render/Render.cpp`, `src/render/grid/PhysicalGrid.cpp`, and `src/ui/DebugPanels.cpp`.
 
 ## Planned features
 
-These capabilities are intentionally not represented as complete in the current codebase.
+### Canonical network and map model
 
-### Network and map architecture
+- Populate `AbstractNetwork` as the canonical topology, then derive `PhysicalNetwork` and
+  `MapNetwork` from it.
+- Generate and persist `AbstractSegment` relationships when routes or track are created.
+- Add physical segment paths beyond straight node-to-node lines: curves, switches, elevation,
+  geometry-aware lengths, and track constraints.
+- Render a separate metro-style diagram from `MapNetwork` with intentionally distorted geometry.
 
-- Make `AbstractNetwork` the populated canonical topology and derive both `PhysicalNetwork` and `MapNetwork` from it.
-- Create and persist `AbstractSegment` relationships when routes or track are generated.
-- Support physical segment geometry beyond straight node-to-node lines: curves, switches, track alignment, elevation, and geometry-aware lengths.
-- Add a simplified, distorted `MapNetwork` renderer for metro-style diagrams separate from the physical-grid map.
-- Generate and edit route segments from selected nodes through a dedicated route-generation workflow.
+### Physical-world editing
 
-### Physical world editing
-
-- Place custom buildings, terrain, and other grid obstructions.
+- Place buildings, terrain, and other grid obstructions.
 - Validate track placement and route generation against obstructions and geometry constraints.
-- Add richer map tools, layers, selection behaviors, and persistence/import/export of network data.
+- Add map layers, richer selection tools, and persistence/import/export.
 
 ### Simulation depth
 
-- Add signalling, block occupancy, reservations, switches, conflict prevention, and headway control.
-- Model passengers, demand, timetables, service frequency, depots, and vehicle dispatch.
-- Expand vehicle families and route/track constraints, including curve speed limits, grades, and more complete train physics.
-- Improve the timing loop to preserve accumulated elapsed time during slow frames rather than advancing at most one fixed tick per iteration.
-- Add scenario tooling, statistics, automated tests, and performance work for large networks.
-
-### Presentation
-
-- Add a true map-diagram mode backed by `MapNetwork`.
-- Provide 3D or terrain-aware rendering only after the physical geometry model supports it.
-- Continue separating normal editor UI from diagnostic tooling and consolidate the remaining large editor/render functions as the feature set grows.
+- Add signalling, blocks, reservations, switches, conflict prevention, and headway control.
+- Model passenger demand, schedules, frequency, depots, and vehicle dispatch.
+- Add curve speed limits, grades, additional vehicle types, scenarios, statistics, and automated
+  tests for larger networks.
 
 ## Technology
 
-- **C++23** — simulation and application code.
+- **C++23** — application and simulation code.
 - **SDL2** — windowing, input, and OpenGL context.
-- **Dear ImGui** — menus, editors, modal dialogs, and diagnostics.
-- **OpenGL 3.3** — ImGui rendering backend and map presentation.
+- **Dear ImGui** — menus, modal editors, and diagnostics.
+- **OpenGL 3.3** — renderer backend and map presentation.
 - **CMake** — build configuration and dependency retrieval.
 
 *Copyright © 2026 Lawrence Chan. All rights reserved.*

@@ -1,87 +1,141 @@
 #include "render/Render.hpp"
 #include "Resources.hpp"
 #include "Simulation.hpp"
-#include "render/PhysicalGridView.hpp"
+#include "render/grid/PhysicalGrid.hpp"
 #include "ui/DebugPanels.hpp"
 
-#include <chrono>
 #include <algorithm>
+#include <chrono>
 
 namespace
 {
-    void applyMetroTheme(ImGuiStyle& style)
+enum class ToolIcon
+{
+    MousePointer,
+    CircleDot,
+    Route
+};
+
+void drawToolIcon(ImDrawList& drawList, const ImRect& bounds, ToolIcon icon)
+{
+    const ImU32 color = IM_COL32(255, 255, 255, 255);
+    const ImVec2 center((bounds.Min.x + bounds.Max.x) * 0.5f, (bounds.Min.y + bounds.Max.y) * 0.5f);
+
+    switch (icon)
     {
-        style.Colors[ImGuiCol_Button] = ImVec4(0.78f, 0.20f, 0.23f, 1.0f);
-        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
-        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
-        style.Colors[ImGuiCol_Header] = ImVec4(0.78f, 0.20f, 0.23f, 1.0f);
-        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
-        style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
-        style.Colors[ImGuiCol_Tab] = ImVec4(0.70f, 0.15f, 0.18f, 1.0f);
-        style.Colors[ImGuiCol_TabHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
-        style.Colors[ImGuiCol_TabActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
-        style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.62f, 0.16f, 0.19f, 1.0f);
-        style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.74f, 0.21f, 0.24f, 1.0f);
+    case ToolIcon::MousePointer:
+    {
+        const ImVec2 pointer[] = {
+            {center.x - 7.0f, center.y - 9.0f}, {center.x - 7.0f, center.y + 7.0f},
+            {center.x - 2.0f, center.y + 3.0f}, {center.x + 3.0f, center.y + 10.0f},
+            {center.x + 6.0f, center.y + 8.0f}, {center.x + 1.0f, center.y + 1.0f},
+            {center.x + 9.0f, center.y - 1.0f}, {center.x - 7.0f, center.y - 9.0f}};
+        drawList.AddPolyline(pointer, IM_ARRAYSIZE(pointer), color, ImDrawFlags_Closed, 1.7f);
+        break;
+    }
+    case ToolIcon::CircleDot:
+        drawList.AddCircle(center, 7.0f, color, 16, 1.7f);
+        drawList.AddCircleFilled(center, 2.5f, color, 12);
+        break;
+    case ToolIcon::Route:
+    {
+        const ImVec2 start(center.x - 8.0f, center.y + 6.0f);
+        const ImVec2 turn(center.x - 1.5f, center.y - 4.0f);
+        const ImVec2 end(center.x + 8.0f, center.y + 2.0f);
+        drawList.AddLine(start, turn, color, 1.7f);
+        drawList.AddLine(turn, end, color, 1.7f);
+        drawList.AddCircleFilled(start, 2.5f, color, 12);
+        drawList.AddCircleFilled(turn, 2.5f, color, 12);
+        drawList.AddCircleFilled(end, 2.5f, color, 12);
+        break;
+    }
     }
 }
 
-void render::Render::drawToolBar() {
+bool toolButton(const char* id, ToolIcon icon, bool selected, const char* tooltip)
+{
+    if (selected)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+
+    const bool clicked = ImGui::Button(id, {32.0f, 28.0f});
+    if (selected)
+    {
+        ImGui::PopStyleColor();
+    }
+
+    drawToolIcon(*ImGui::GetWindowDrawList(),
+                 ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()), icon);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", tooltip);
+    }
+    return clicked;
+}
+
+void applyMetroTheme(ImGuiStyle& style)
+{
+    style.Colors[ImGuiCol_Button] = ImVec4(0.78f, 0.20f, 0.23f, 1.0f);
+    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
+    style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
+    style.Colors[ImGuiCol_Header] = ImVec4(0.78f, 0.20f, 0.23f, 1.0f);
+    style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
+    style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
+    style.Colors[ImGuiCol_Tab] = ImVec4(0.70f, 0.15f, 0.18f, 1.0f);
+    style.Colors[ImGuiCol_TabHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
+    style.Colors[ImGuiCol_TabActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
+    style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.62f, 0.16f, 0.19f, 1.0f);
+    style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.74f, 0.21f, 0.24f, 1.0f);
+}
+} // namespace
+
+void render::Render::drawToolBar()
+{
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const float menuHeight = ImGui::GetFrameHeight();
     constexpr float toolbarHeight = 40.0f;
 
-    ImGui::SetNextWindowPos(ImVec2(
-        viewport->WorkPos.x + 10.0f,
-        viewport->WorkPos.y + menuHeight + 1.0f), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(
-        std::max(180.0f, viewport->WorkSize.x - 20.0f),
-        toolbarHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x + 10.0f, viewport->WorkPos.y + menuHeight + 1.0f),
+        ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(std::max(180.0f, viewport->WorkSize.x - 20.0f), toolbarHeight),
+                             ImGuiCond_Always);
 
     ImGui::Begin("Tools", nullptr,
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse);
+                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar |
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+                     ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    const ImVec4 selectedColour = ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive);
-    const bool pointerSelected = activeTool == Tool::Pointer;
-    if (pointerSelected) ImGui::PushStyleColor(ImGuiCol_Button, selectedColour);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-    if (ImGui::Button("P")) activeTool = Tool::Pointer;
-    ImGui::PopStyleColor();
-    if (pointerSelected) ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Pointer tool");
+    if (toolButton("##pointer-tool", ToolIcon::MousePointer, activeTool == Tool::Pointer,
+                   "Pointer tool"))
+    {
+        activeTool = Tool::Pointer;
+    }
 
     ImGui::SameLine();
-    const bool nodeSelected = activeTool == Tool::Node;
-    if (nodeSelected) ImGui::PushStyleColor(ImGuiCol_Button, selectedColour);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-    if (ImGui::Button("N")) activeTool = Tool::Node;
-    ImGui::PopStyleColor();
-    if (nodeSelected) ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Node tool");
+    if (toolButton("##node-tool", ToolIcon::CircleDot, activeTool == Tool::Node, "Node tool"))
+    {
+        activeTool = Tool::Node;
+    }
 
     ImGui::SameLine();
-    const bool routeSelected = activeTool == Tool::Route;
-    if (routeSelected) ImGui::PushStyleColor(ImGuiCol_Button, selectedColour);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-    if (ImGui::Button("R")) activeTool = Tool::Route;
-    ImGui::PopStyleColor();
-    if (routeSelected) ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Route tool");
+    if (toolButton("##route-tool", ToolIcon::Route, activeTool == Tool::Route, "Route tool"))
+    {
+        activeTool = Tool::Route;
+    }
 
     ImGui::End();
 }
 
-float  render::Render::pxFromPt(float pt, float dpi) {
+float render::Render::pxFromPt(float pt, float dpi)
+{
     // With 96 DPI: px = pt * DPI / 72. ~ px = pt * 4/3
     return pt * dpi / 72;
 }
 
-void render::Render::openURL(const std::string& url) {
+void render::Render::openURL(const std::string& url)
+{
 #ifdef _WIN32
     std::string command = "start " + url;
 #elif __APPLE__
@@ -92,7 +146,8 @@ void render::Render::openURL(const std::string& url) {
     std::system(command.c_str());
 }
 
-void render::Render::setup() {
+void render::Render::setup()
+{
     Resources resources = Resources();
     // Initial SDL2, ImGui, and OpenGL setup
     SDL_Init(SDL_INIT_VIDEO);
@@ -105,20 +160,13 @@ void render::Render::setup() {
     this->executableDirectory = this->resourcesPath / ".." / "MacOS";
     this->fontResourcesPath = this->resourcesPath / "fonts" / "GoogleSansFlex.ttf";
 
-
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-        SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    this->window = SDL_CreateWindow(
-        "Transit Engine",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
-    );
+    this->window =
+        SDL_CreateWindow("Transit Engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                         WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     this->glContext = SDL_GL_CreateContext(this->window);
 
@@ -135,7 +183,7 @@ void render::Render::setup() {
     ImGui::StyleColorsLight();
     applyMetroTheme(ImGui::GetStyle());
     // ImGui::StyleColorsDark();
-    
+
     std::cout << "Set background to light theme.";
 
     // IO Settings
@@ -143,10 +191,8 @@ void render::Render::setup() {
 
     ImGuiIO& ioSettings = ImGui::GetIO();
     ioSettings.FontGlobalScale = 1.0f;
-    ioSettings.Fonts->AddFontFromFileTTF(
-        this->fontResourcesPath.string().c_str(),
-        render::Render::pxFromPt(16.0)
-    );
+    ioSettings.Fonts->AddFontFromFileTTF(this->fontResourcesPath.string().c_str(),
+                                         render::Render::pxFromPt(16.0));
 
     std::cout << "Resource directory: " << this->resourcesPath << std::endl;
     // =============
@@ -157,11 +203,13 @@ void render::Render::setup() {
     ui::LogBuffer::instance().add("Transit Engine initialized.");
 }
 
-double render::Render::getLastRenderWorkMs() const {
+double render::Render::getLastRenderWorkMs() const
+{
     return this->lastRenderWorkMs;
 }
 
-bool render::Render::update(Simulation& simulation) {
+bool render::Render::update(Simulation& simulation)
+{
     const auto renderWorkStart = std::chrono::high_resolution_clock::now();
 
     SDL_Event event;
@@ -182,129 +230,132 @@ bool render::Render::update(Simulation& simulation) {
 
     if (ImGui::BeginMainMenuBar())
     {
-    if (ImGui::BeginMenu("About"))
-    {
-        if (ImGui::MenuItem("About Transit Engine"))
+        if (ImGui::BeginMenu("About"))
         {
-            // About
-        }
-        if (ImGui::MenuItem("GitHub Repository"))
-        {
-            render::Render::openURL("https://github.com/lwrychan/TransitEngine");
-        }
-
-        ImGui::EndMenu();
-    }
-
-
-    if (ImGui::BeginMenu("Simulation"))
-    {
-        if (ImGui::MenuItem("Start / Resume"))
-        {
-            simulation.setRunning(true);
-            ui::LogBuffer::instance().add("Simulation started from menu.");
-        }
-
-        if (ImGui::MenuItem("Pause"))
-        {
-            simulation.setRunning(false);
-            ui::LogBuffer::instance().add("Simulation paused from menu.");
-        }
-
-        if (ImGui::BeginMenu("Simulation Rate"))
-        {
-            if (ImGui::MenuItem("0.25x"))
+            if (ImGui::MenuItem("About Transit Engine"))
             {
-                simulation.setSpeedMultiplier(0.25);
+                // About
             }
-
-            if (ImGui::MenuItem("1x"))
+            if (ImGui::MenuItem("GitHub Repository"))
             {
-                simulation.setSpeedMultiplier(1.0);
-            }
-
-            if (ImGui::MenuItem("2x"))
-            {
-                simulation.setSpeedMultiplier(2.0);
-            }
-
-            if (ImGui::MenuItem("4x"))
-            {
-                simulation.setSpeedMultiplier(4.0);
+                render::Render::openURL("https://github.com/lwrychan/TransitEngine");
             }
 
             ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Manage Vehicles")) {
-            showPopupManageVehicles = true;
+        if (ImGui::BeginMenu("Simulation"))
+        {
+            if (ImGui::MenuItem("Start / Resume"))
+            {
+                simulation.setRunning(true);
+                ui::LogBuffer::instance().add("Simulation started from menu.");
+            }
+
+            if (ImGui::MenuItem("Pause"))
+            {
+                simulation.setRunning(false);
+                ui::LogBuffer::instance().add("Simulation paused from menu.");
+            }
+
+            if (ImGui::BeginMenu("Simulation Rate"))
+            {
+                if (ImGui::MenuItem("0.25x"))
+                {
+                    simulation.setSpeedMultiplier(0.25);
+                }
+
+                if (ImGui::MenuItem("1x"))
+                {
+                    simulation.setSpeedMultiplier(1.0);
+                }
+
+                if (ImGui::MenuItem("2x"))
+                {
+                    simulation.setSpeedMultiplier(2.0);
+                }
+
+                if (ImGui::MenuItem("4x"))
+                {
+                    simulation.setSpeedMultiplier(4.0);
+                }
+
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::MenuItem("Manage Vehicles"))
+            {
+                showPopupManageVehicles = true;
+            }
+
+            ImGui::EndMenu();
         }
 
-        ImGui::EndMenu();
-    }
-
-
-    if (ImGui::BeginMenu("Add"))
-    {
-        if (ImGui::BeginMenu("Node"))
+        if (ImGui::BeginMenu("Add"))
         {
-            if (ImGui::BeginMenu("NodeMenu")) {
-                if (ImGui::MenuItem("Rail Station")) {}
-                if (ImGui::MenuItem("Bus Stop")) {}
-                if (ImGui::MenuItem("Road Intersection")) {}
+            if (ImGui::BeginMenu("Node"))
+            {
+                if (ImGui::BeginMenu("NodeMenu"))
+                {
+                    if (ImGui::MenuItem("Rail Station"))
+                    {
+                    }
+                    if (ImGui::MenuItem("Bus Stop"))
+                    {
+                    }
+                    if (ImGui::MenuItem("Road Intersection"))
+                    {
+                    }
 
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();
         }
-        ImGui::EndMenu();
-    }
 
-
-    if (ImGui::BeginMenu("Edit"))
-    {
-        ImGui::MenuItem("Undo");
-        ImGui::MenuItem("Redo");
-
-        ImGui::MenuItem("Copy");
-        ImGui::MenuItem("Paste");
-
-        ImGui::MenuItem("Rotate Clockwise");
-        ImGui::MenuItem("Rotate Counterclockwise");
-        ImGui::MenuItem("Set Rotation");
-
-        ImGui::MenuItem("Properties");
-
-        ImGui::EndMenu();
-    }
-
-
-    if (ImGui::BeginMenu("View"))
-    {
-        ImGui::MenuItem("Show Routes");
-        ImGui::MenuItem("Show Vehicles");
-        ImGui::Separator();
-        ImGui::MenuItem("Debug View", nullptr, &debugView);
-
-        ImGui::EndMenu();
-    }
-
-
-    if (ImGui::BeginMenu("Help"))
-    {
-        if (ImGui::MenuItem("Documentation"))
+        if (ImGui::BeginMenu("Edit"))
         {
+            ImGui::MenuItem("Undo");
+            ImGui::MenuItem("Redo");
+
+            ImGui::MenuItem("Copy");
+            ImGui::MenuItem("Paste");
+
+            ImGui::MenuItem("Rotate Clockwise");
+            ImGui::MenuItem("Rotate Counterclockwise");
+            ImGui::MenuItem("Set Rotation");
+
+            ImGui::MenuItem("Properties");
+
+            ImGui::EndMenu();
         }
 
-        ImGui::EndMenu();
-    }
+        if (ImGui::BeginMenu("View"))
+        {
+            ImGui::MenuItem("Show Routes");
+            ImGui::MenuItem("Show Vehicles");
+            ImGui::Separator();
+            ImGui::MenuItem("Debug View", nullptr, &debugView);
 
+            ImGui::EndMenu();
+        }
 
-    ImGui::EndMainMenuBar();
+        if (ImGui::BeginMenu("Help"))
+        {
+            if (ImGui::MenuItem("Documentation"))
+            {
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
     }
 
     ui::drawEditorDialogs(simulation);
-    if (debugView) {
+    if (debugView)
+    {
         ui::drawSimulationControls(simulation);
         ui::drawDebugViewer(simulation);
         ui::drawPerformancePanel(simulation);
@@ -312,28 +363,29 @@ bool render::Render::update(Simulation& simulation) {
         ui::drawEditorPanel(simulation);
         ui::drawLogPanel();
     }
-    render::drawPhysicalGridView(
-        simulation.getWorld(), simulation.getConfig().renderingConfig,
-        activeTool,
-        ui::isModalOpen() || ui::isRouteModalOpen() ||
-        showPopupManageVehicles ||
-        ImGui::IsPopupOpen("Manage Vehicles"));
+    const bool modalOpen = ui::isModalOpen() || ui::isRouteModalOpen() || showPopupManageVehicles ||
+                           ImGui::IsPopupOpen("Manage Vehicles");
+    render::grid::drawPhysicalGridView(
+        simulation.getWorld(), simulation.getConfig().renderingConfig, activeTool, modalOpen);
     ui::drawRouteControls(simulation.getWorld());
 
-    if (ImGui::BeginPopupModal("Manage Vehicles", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Manage Vehicles", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
         ImGui::Text("Vehicle management");
         ImGui::Text("Create a vehicle for the current simulation.");
         ImGui::Separator();
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-        if (ImGui::Button("Create Vehicle", ImVec2(120, 0))) {
+        if (ImGui::Button("Create Vehicle", ImVec2(120, 0)))
+        {
             ui::requestVehicleCreation();
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor();
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(120, 0)))
+        {
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor();
@@ -341,7 +393,8 @@ bool render::Render::update(Simulation& simulation) {
         ImGui::EndPopup();
     }
 
-    if (showPopupManageVehicles) {
+    if (showPopupManageVehicles)
+    {
         ImGui::OpenPopup("Manage Vehicles");
     }
 
@@ -367,7 +420,8 @@ bool render::Render::update(Simulation& simulation) {
     return true;
 }
 
-void render::Render::close() {
+void render::Render::close()
+{
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
 

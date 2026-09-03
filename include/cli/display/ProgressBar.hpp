@@ -2,30 +2,30 @@
 
 namespace cli
 {
-    namespace display
+namespace display
+{
+    class ProgressBar
     {
-        class ProgressBar
-        {
-        public:
-            ProgressBar(int maxWidth = 3, std::string rightText = "", std::string topText = "");
+    public:
+        ProgressBar(int maxWidth = 3, std::string rightText = "", std::string topText = "");
 
-            int getMaxWidth();
-            int getCurrentWidth();
+        int getMaxWidth();
+        int getCurrentWidth();
 
-            void setProgress(double progress);
-            void setRightText(std::string &text);
-            void setTopText(std::string &text);
+        void setProgress(double progress);
+        void setRightText(std::string& text);
+        void setTopText(std::string& text);
 
-            void print();
+        void print();
 
-            void finishStaticPrint();
+        void finishStaticPrint();
 
-        private:
-            double progress;
-            int currentWidth;
-            int maxWidth;
-            std::string rightText;
-            std::string topText;
-        };
-    }
-}
+    private:
+        double progress;
+        int currentWidth;
+        int maxWidth;
+        std::string rightText;
+        std::string topText;
+    };
+} // namespace display
+} // namespace cli
