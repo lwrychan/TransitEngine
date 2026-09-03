@@ -28,7 +28,8 @@ struct RenderingConfig
     // Visible square-map areas used by the physical grid renderer. The corresponding
     // side lengths are their square roots: 25 m² = 5 m x 5 m, 100 m² = 10 m x 10 m.
     double minimumGridZoomAreaSquareMeters = 25.0;
-    double maximumGridZoomAreaSquareMeters = 250000.0;
+    // 25,000,000 m² gives a 5 km × 5 km outer square view.
+    double maximumGridZoomAreaSquareMeters = 25000000.0;
     double defaultGridZoomAreaSquareMeters = 100.0;
 };
 struct UIConfig{};

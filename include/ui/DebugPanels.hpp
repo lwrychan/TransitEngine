@@ -4,6 +4,9 @@
 #include <vector>
 
 #include "Simulation.hpp"
+#include "network/PhysicalCoordinate.hpp"
+#include "network/AbstractRoute.hpp"
+#include "Identifiers.hpp"
 
 namespace ui
 {
@@ -31,11 +34,36 @@ namespace ui
     };
 
     VehicleCreationDraft& getVehicleCreationDraft();
+    void requestVehicleCreation();
+
+    void requestNodeCreation(const network::PhysicalCoordinate& coordinate);
+    void requestNodeEdit(core::World& world, AbstractNodeId node);
+    void requestNodeEdit(
+        core::World& world,
+        AbstractNodeId node,
+        const network::PhysicalCoordinate& coordinate);
+    void requestNodeMove(
+        core::World& world,
+        AbstractNodeId node,
+        const network::PhysicalCoordinate& coordinate);
+    void toggleRouteNode(AbstractNodeId node);
+    bool isRouteNodeSelected(AbstractNodeId node);
+    const std::vector<AbstractNodeId>& getRouteSelectionNodes();
+    network::RouteColor getRouteDraftColor();
+    void requestRouteSave();
+    void requestRouteEdit(core::World& world, AbstractRouteId route);
+    bool isRouteModalOpen();
+    void drawRouteControls(core::World& world);
+    bool isModalOpen();
+    bool shouldShowVehicleSpeeds();
+    void drawEditorDialogs(Simulation& simulation);
+    void drawDeleteConfirmation(core::World& world);
+    void drawNodeMoveConfirmation(core::World& world);
 
     void drawSimulationControls(Simulation& simulation);
-    void drawVehicleInspector(Simulation& simulation);
+    void drawDebugViewer(Simulation& simulation);
     void drawPerformancePanel(Simulation& simulation);
     void drawWorldSummary(Simulation& simulation);
-    void drawNetworkInspector(Simulation& simulation);
+    void drawEditorPanel(Simulation& simulation);
     void drawLogPanel();
 }

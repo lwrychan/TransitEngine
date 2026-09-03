@@ -6,6 +6,8 @@
 #include <iostream>
 #include <thread>
 
+using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
 Simulation::Simulation(const CoreConfig& config)
     : globalConfig(config),
     timestep(1.0 / config.clockConfig.targetSimulationFps),
@@ -16,7 +18,6 @@ Simulation::Simulation(const CoreConfig& config)
     lastRenderLatencyMs(0.0),
     lastSimulationLatencyMs(0.0),
     lastOverallLatencyMs(0.0),
-    clock(timestep),
     world(config)
 {
 }
@@ -86,9 +87,6 @@ void Simulation::run() {
 
     TimePoint iterationStart = std::chrono::high_resolution_clock::now();
 
-    this->clock.step();
-    this->world.setup();
-
     renderInstance.setup();
     bool running = true;
 
@@ -119,7 +117,7 @@ void Simulation::run() {
 
             const TimePoint stepStart = std::chrono::high_resolution_clock::now();
 
-            this->world.tick();
+            this->world.tick(this->timestep * this->speedMultiplier);
             this->simTime += this->timestep * this->speedMultiplier;
             this->stepOnceRequested = false;
 

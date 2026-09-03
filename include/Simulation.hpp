@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/CoreConfig.hpp"
-#include "core/Clock.hpp"
 #include "core/World.hpp"
 
 class Simulation {
@@ -47,6 +46,5 @@ private:
     double lastRenderLatencyMs;
     double lastSimulationLatencyMs;
     double lastOverallLatencyMs;
-    core::Clock clock;
     core::World world;
 };

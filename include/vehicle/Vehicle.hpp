@@ -1,11 +1,19 @@
 #pragma once
 
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "Identifiers.hpp"
 
 namespace vehicle
 {
+    struct RouteStop
+    {
+        AbstractNodeId node;
+        double dwellSeconds = 20.0;
+    };
+
     class Vehicle
     {
     public:
@@ -22,7 +30,20 @@ namespace vehicle
             double decelerationKphPerSecond,
             int passengerCapacity);
 
-        void update(double timestep);
+        double update(double timestep, double distanceToControlPoint);
+
+        void assignRoute(AbstractRouteId route, std::vector<RouteStop> stops);
+        void clearRoute();
+        const std::optional<AbstractRouteId>& getAssignedRoute() const;
+        const std::vector<RouteStop>& getStops() const;
+        void setStops(std::vector<RouteStop> stops);
+        void beginDwell(double seconds);
+        bool isDwelling() const;
+        double getRemainingDwellSeconds() const;
+        double getRouteProgressMeters() const;
+        void setRouteProgressMeters(double progressMeters);
+        int getRouteDirection() const;
+        void setRouteDirection(int direction);
 
         const std::string& getDisplayName() const;
 
@@ -47,13 +68,14 @@ namespace vehicle
         const int getPassengerCapacity();
         // Returns configured passenger capacity (number of passengers)
 
+        double getCurrentSpeedKph() const;
+
     protected:
         double setMaxOperatingSpeed(double speedKph);
         double setAcceleration(double accelerationKphPerSecond);
         double setDeceleration(double decelerationKphPerSecond);
         int setPassengerCapacity(int capacity);
 
-        void setRoute(AbstractRouteId route);
         void setSegment(AbstractSegmentId segment);
 
     private:
@@ -63,9 +85,13 @@ namespace vehicle
         double deceleration;
         int passengerCapacity;
 
-        AbstractRouteId assignedRouteId;
+        std::optional<AbstractRouteId> assignedRouteId;
+        std::vector<RouteStop> stops;
         AbstractSegmentId currentSegmentId;
 
-        double segmentProgress = 0.0;
+        double routeProgressMeters = 0.0;
+        int routeDirection = 1;
+        double currentSpeed = 0.0;
+        double remainingDwellSeconds = 0.0;
     };
 }

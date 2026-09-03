@@ -58,7 +58,6 @@ find_package(OpenGL REQUIRED)
 set(SOURCES
     src/main.cpp
     src/core/World.cpp
-    src/core/Clock.cpp
     src/vehicle/Vehicle.cpp
     src/cli/display/ProgressBar.cpp
     src/cli/Terminal.cpp
@@ -70,6 +69,7 @@ set(SOURCES
     src/ui/DebugPanels.cpp
     src/network/Slot.cpp
     src/network/SlotMap.cpp
+    src/network/PhysicalNode.cpp
 )
 
 if(APPLE)

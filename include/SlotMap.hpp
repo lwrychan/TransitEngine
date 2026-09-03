@@ -13,10 +13,13 @@ public:
     void clear(size_t index);
 
     ItemType& get(ItemIdType itemId);
+    const ItemType& get(ItemIdType itemId) const;
 
     ItemIdType add(ItemType item);
 
     size_t getActiveCount() const;
+
+    size_t getSlotCount();
 
     void forEachActive(const std::function<void(ItemIdType, ItemType&)>& callback);
 

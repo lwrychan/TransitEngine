@@ -4,7 +4,6 @@
 
 #include "core/CoreConfig.hpp"
 #include "core/World.hpp"
-#include "core/Clock.hpp"
 #include "vehicle/Vehicle.hpp"
 #include "cli/Terminal.hpp"
 #include "cli/display/ProgressBar.hpp"

@@ -15,10 +15,18 @@ ItemType& Slot<ItemType>::getItem() {
 }
 
 template<typename ItemType>
+const ItemType& Slot<ItemType>::getItem() const {
+    return this->item;
+}
+
+template<typename ItemType>
 void Slot<ItemType>::incrementGeneration() { this->generation++; }
 
 template<typename ItemType>
 unsigned int Slot<ItemType>::getGeneration() { return this->generation; }
+
+template<typename ItemType>
+unsigned int Slot<ItemType>::getGeneration() const { return this->generation; }
 
 template<typename ItemType>
 void Slot<ItemType>::setGeneration(unsigned int generation) { this->generation = generation; }

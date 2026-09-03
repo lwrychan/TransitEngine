@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "render/PhysicalGridView.hpp"
+
 class Simulation;
 
 constexpr int WINDOW_WIDTH = 1280;
@@ -30,6 +32,8 @@ namespace render {
         double getLastRenderWorkMs() const;
 
     private:
+        void drawToolBar();
+
         SDL_GLContext glContext;
         SDL_Window* window;
 
@@ -38,5 +42,7 @@ namespace render {
         std::filesystem::path fontResourcesPath;
 
         double lastRenderWorkMs = 0.0;
+        Tool activeTool = Tool::Pointer;
+        bool debugView = true;
     };
 }

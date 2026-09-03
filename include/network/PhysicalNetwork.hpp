@@ -6,19 +6,15 @@
 #include "AbstractNetwork.hpp"
 #include "Identifiers.hpp"
 
+#include "PhysicalCoordinate.hpp"
+
 namespace network
 {
-    struct PhysicalPoint
-    {
-        double xMeters = 0.0;
-        double yMeters = 0.0;
-    };
-
     // The real-world shape of one abstract segment, expressed in metres.
     struct PhysicalSegmentGeometry
     {
         AbstractSegmentId abstractSegmentId{-1, -1};
-        std::vector<PhysicalPoint> path;
+        std::vector<PhysicalCoordinate> path;
     };
 
     // Physical projection of AbstractNetwork: identical topology plus real track geometry.
@@ -33,7 +29,7 @@ namespace network
             return segmentGeometries;
         }
 
-        void setSegmentGeometry(AbstractSegmentId segmentId, std::vector<PhysicalPoint> path) {
+        void setSegmentGeometry(AbstractSegmentId segmentId, std::vector<PhysicalCoordinate> path) {
             for (PhysicalSegmentGeometry& geometry : segmentGeometries) {
                 if (geometry.abstractSegmentId.id == segmentId.id
                     && geometry.abstractSegmentId.generation == segmentId.generation) {

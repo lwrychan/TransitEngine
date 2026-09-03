@@ -5,6 +5,76 @@
 #include "ui/DebugPanels.hpp"
 
 #include <chrono>
+#include <algorithm>
+
+namespace
+{
+    void applyMetroTheme(ImGuiStyle& style)
+    {
+        style.Colors[ImGuiCol_Button] = ImVec4(0.78f, 0.20f, 0.23f, 1.0f);
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
+        style.Colors[ImGuiCol_Header] = ImVec4(0.78f, 0.20f, 0.23f, 1.0f);
+        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
+        style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
+        style.Colors[ImGuiCol_Tab] = ImVec4(0.70f, 0.15f, 0.18f, 1.0f);
+        style.Colors[ImGuiCol_TabHovered] = ImVec4(0.88f, 0.31f, 0.34f, 1.0f);
+        style.Colors[ImGuiCol_TabActive] = ImVec4(0.66f, 0.10f, 0.13f, 1.0f);
+        style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.62f, 0.16f, 0.19f, 1.0f);
+        style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.74f, 0.21f, 0.24f, 1.0f);
+    }
+}
+
+void render::Render::drawToolBar() {
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float menuHeight = ImGui::GetFrameHeight();
+    constexpr float toolbarHeight = 40.0f;
+
+    ImGui::SetNextWindowPos(ImVec2(
+        viewport->WorkPos.x + 10.0f,
+        viewport->WorkPos.y + menuHeight + 1.0f), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(
+        std::max(180.0f, viewport->WorkSize.x - 20.0f),
+        toolbarHeight), ImGuiCond_Always);
+
+    ImGui::Begin("Tools", nullptr,
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse);
+
+    const ImVec4 selectedColour = ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive);
+    const bool pointerSelected = activeTool == Tool::Pointer;
+    if (pointerSelected) ImGui::PushStyleColor(ImGuiCol_Button, selectedColour);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    if (ImGui::Button("P")) activeTool = Tool::Pointer;
+    ImGui::PopStyleColor();
+    if (pointerSelected) ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Pointer tool");
+
+    ImGui::SameLine();
+    const bool nodeSelected = activeTool == Tool::Node;
+    if (nodeSelected) ImGui::PushStyleColor(ImGuiCol_Button, selectedColour);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    if (ImGui::Button("N")) activeTool = Tool::Node;
+    ImGui::PopStyleColor();
+    if (nodeSelected) ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Node tool");
+
+    ImGui::SameLine();
+    const bool routeSelected = activeTool == Tool::Route;
+    if (routeSelected) ImGui::PushStyleColor(ImGuiCol_Button, selectedColour);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    if (ImGui::Button("R")) activeTool = Tool::Route;
+    ImGui::PopStyleColor();
+    if (routeSelected) ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Route tool");
+
+    ImGui::End();
+}
 
 float  render::Render::pxFromPt(float pt, float dpi) {
     // With 96 DPI: px = pt * DPI / 72. ~ px = pt * 4/3
@@ -63,6 +133,7 @@ void render::Render::setup() {
     std::cout << "Base (executable) directory: " << this->executableDirectory << std::endl;
 
     ImGui::StyleColorsLight();
+    applyMetroTheme(ImGui::GetStyle());
     // ImGui::StyleColorsDark();
     
     std::cout << "Set background to light theme.";
@@ -212,6 +283,8 @@ bool render::Render::update(Simulation& simulation) {
     {
         ImGui::MenuItem("Show Routes");
         ImGui::MenuItem("Show Vehicles");
+        ImGui::Separator();
+        ImGui::MenuItem("Debug View", nullptr, &debugView);
 
         ImGui::EndMenu();
     }
@@ -230,28 +303,40 @@ bool render::Render::update(Simulation& simulation) {
     ImGui::EndMainMenuBar();
     }
 
-    ui::drawSimulationControls(simulation);
-    ui::drawVehicleInspector(simulation);
-    ui::drawPerformancePanel(simulation);
-    ui::drawWorldSummary(simulation);
+    ui::drawEditorDialogs(simulation);
+    if (debugView) {
+        ui::drawSimulationControls(simulation);
+        ui::drawDebugViewer(simulation);
+        ui::drawPerformancePanel(simulation);
+        ui::drawWorldSummary(simulation);
+        ui::drawEditorPanel(simulation);
+        ui::drawLogPanel();
+    }
     render::drawPhysicalGridView(
-        simulation.getWorld().getPhysicalNetwork(), simulation.getConfig().renderingConfig);
-    ui::drawNetworkInspector(simulation);
-    ui::drawLogPanel();
+        simulation.getWorld(), simulation.getConfig().renderingConfig,
+        activeTool,
+        ui::isModalOpen() || ui::isRouteModalOpen() ||
+        showPopupManageVehicles ||
+        ImGui::IsPopupOpen("Manage Vehicles"));
+    ui::drawRouteControls(simulation.getWorld());
 
     if (ImGui::BeginPopupModal("Manage Vehicles", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Vehicle management");
-        ImGui::Text("Use the Vehicle Inspector panel to add or remove vehicles.");
+        ImGui::Text("Create a vehicle for the current simulation.");
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            // Execute reset logic here
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+        if (ImGui::Button("Create Vehicle", ImVec2(120, 0))) {
+            ui::requestVehicleCreation();
             ImGui::CloseCurrentPopup();
         }
+        ImGui::PopStyleColor();
         ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
         if (ImGui::Button("Cancel", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
         }
+        ImGui::PopStyleColor();
 
         ImGui::EndPopup();
     }
@@ -259,6 +344,8 @@ bool render::Render::update(Simulation& simulation) {
     if (showPopupManageVehicles) {
         ImGui::OpenPopup("Manage Vehicles");
     }
+
+    drawToolBar();
 
     ImGui::Render();
 

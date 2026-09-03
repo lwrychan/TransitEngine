@@ -27,6 +27,11 @@ ItemIdType SlotMap<ItemType, ItemIdType>::add(ItemType item) {
 }
 
 template<typename ItemType, typename ItemIdType>
+size_t SlotMap<ItemType, ItemIdType>::getSlotCount() {
+    return this->slots.size();
+}
+
+template<typename ItemType, typename ItemIdType>
 void SlotMap<ItemType, ItemIdType>::clear(size_t index) {
     if (index < 0 || index >= slots.size()) { return; }
 
@@ -42,6 +47,12 @@ ItemType& SlotMap<ItemType, ItemIdType>::get(ItemIdType itemId) {
         return slot.getItem();
     }
 
+    return slot.getItem();
+}
+
+template<typename ItemType, typename ItemIdType>
+const ItemType& SlotMap<ItemType, ItemIdType>::get(ItemIdType itemId) const {
+    const Slot<ItemType>& slot = this->slots[itemId.id];
     return slot.getItem();
 }
 
