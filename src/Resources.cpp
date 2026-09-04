@@ -2,8 +2,8 @@
 Resources::Resources()
 {
 #ifdef _WIN32
-    this->baseDirectory = "resources/";
+  this->baseDirectory = "resources/";
 #elif __APPLE__
-    this->baseDirectory = "../Resources/";
+  this->baseDirectory = "../Resources/";
 #endif
 }

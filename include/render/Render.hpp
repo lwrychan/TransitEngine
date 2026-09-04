@@ -11,8 +11,13 @@
 #include <string>
 
 #include "render/GridTool.hpp"
+#include "render/grid/GridViewMode.hpp"
 
 class Simulation;
+namespace core
+{
+class World;
+}
 
 constexpr int WINDOW_WIDTH = 1280;
 constexpr int WINDOW_HEIGHT = 720;
@@ -23,28 +28,30 @@ namespace render
 {
 class Render
 {
-public:
-    void setup();
-    bool update(Simulation& simulation);
-    void close();
+  public:
+  void setup();
+  bool update(Simulation& simulation);
+  void close();
 
-    float pxFromPt(float pt, float dpi = 96.0);
-    void openURL(const std::string& url);
+  float pxFromPt(float pt, float dpi = 96.0);
+  void openURL(const std::string& url);
 
-    double getLastRenderWorkMs() const;
+  double getLastRenderWorkMs() const;
 
-private:
-    void drawToolBar();
+  private:
+  void drawToolBar(core::World& world);
+  void drawAboutModal();
 
-    SDL_GLContext glContext;
-    SDL_Window* window;
+  SDL_GLContext glContext;
+  SDL_Window* window;
 
-    std::filesystem::path executableDirectory;
-    std::filesystem::path resourcesPath;
-    std::filesystem::path fontResourcesPath;
+  std::filesystem::path executableDirectory;
+  std::filesystem::path resourcesPath;
+  std::filesystem::path fontResourcesPath;
 
-    double lastRenderWorkMs = 0.0;
-    Tool activeTool = Tool::Pointer;
-    bool debugView = true;
+  double lastRenderWorkMs = 0.0;
+  Tool activeTool = Tool::Pointer;
+  grid::GridViewMode gridViewMode = grid::GridViewMode::Plan;
+  bool debugView = true;
 };
 } // namespace render

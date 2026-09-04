@@ -6,12 +6,12 @@ namespace vehicle
 {
 namespace rail
 {
-    class RailVehicle : Vehicle
-    {
-    public:
-        RailVehicle(double maxOperatingSpeedKph, double acceleration, double deceleration,
-                    int passengerCapacity);
-    };
+  class RailVehicle : Vehicle
+  {
+public:
+    RailVehicle(double maxOperatingSpeedKph, double acceleration, double deceleration,
+                int passengerCapacity);
+  };
 } // namespace rail
 
 } // namespace vehicle

@@ -27,17 +27,22 @@ or inside the application bundle.
 
 ### Editor
 
-The main view is a resizable, metre-based physical grid. It supports mouse-wheel zoom, middle-
+The main view is a resizable, meter-based physical grid. It supports mouse-wheel zoom, middle-
 mouse panning, adaptive grid detail, a scale bar, and configurable visible-area limits.
 
 - **Pointer** selects, edits, and moves nodes; it also selects and edits routes.
-- **Node** snaps the cursor to metre intersections and opens a creation dialog on click.
+- **Node** snaps the cursor to meter intersections and opens a creation dialog on click.
 - **Route** creates an ordered route from selected existing nodes. Routes have names, colors,
   editable node sequences, labels, and confirmed deletion.
+- **Geometry** edits the physical geometry layered over an active route. Intermediate geometry
+  nodes can be added, moved, or removed; spans support linear or Bézier interpolation and an
+  independent maximum speed.
 - Nodes have a logical `AbstractNode` and matching coordinate-bearing `PhysicalNode`. They can
   be named and classified as generic nodes, rail stations, bus stops, or road intersections.
 - Labels avoid route geometry and other placed labels where possible. Selected and route-selected
   nodes use distinct highlight rings.
+- The grid has plan and axonometric 2.5D views. The latter renders elevation, vertical node
+  guides, and vehicle prisms while keeping editing in the plan view.
 
 ### Simulation
 
@@ -50,16 +55,54 @@ tick cadence.
   and passenger capacity.
 - A vehicle can be assigned to an existing route and configured with local or endpoint service,
   then edited to select stops and dwell times per stop.
-- Vehicle motion uses metre distances. It accelerates to the operating limit and uses braking
-  distance to decelerate for the next stop or route end.
+- Vehicle motion uses physical route-geometry distance, including curves and elevation. It
+  accelerates to the lower of its operating limit and the current geometry-span speed limit, then
+  uses braking distance to decelerate for the next stop or route end.
 - Open routes reverse direction at their ends. Routes whose first and last nodes match are treated
   as closed loops.
 - The grid draws direction-aligned vehicle markers. Hovering one shows its current speed; the
   debug view can keep speeds visible.
 
-The optional debug view provides simulation controls, world counts, editor controls, logs, and
-latency diagnostics. Render and simulation work are reported separately; overall latency is the
-wall-clock frame duration and may include intentional frame pacing.
+Normal mode puts Simulation Controls, Inspector, and Editor in a fixed side column beside the
+grid. Debug View adds Performance, World State, and Log panels. Performance readings are sampled
+at an adjustable interval (8 Hz by default); this affects only the debug display. Render and
+simulation work are reported separately; overall latency is the wall-clock frame duration and may
+include intentional frame pacing.
+
+## Tutorial: build and run a small route
+
+This workflow exercises the editor and simulation features that are currently implemented.
+
+1. **Navigate the grid.** Use the mouse wheel to zoom. Drag with the middle mouse button, or hold
+   Left Alt while dragging with the left mouse button, to pan. Reset View returns to the origin
+   when the map is empty, or frames the existing nodes. The 2.5D toolbar button changes only the
+   presentation; edit nodes and geometry from the plan view.
+2. **Create nodes.** Choose the Node tool, then click meter intersections on the grid. Give each
+   node a name and type in the dialog, optionally adjusting its coordinates before Confirm. X and
+   Y must remain inside the current 5 km grid extent (−2,500 m to +2,500 m); Z is available for
+   elevation. Create at least two nodes.
+3. **Create a route.** Choose the Route tool and click existing nodes in travel order. The bottom
+   bar shows the selected-node count; choose Save Route, set a display name and color, then choose
+   Save in the dialog. Clicking the first selected node again as the final selection creates a
+   closed loop. Use the Pointer tool to select a route, or double-click/right-click it to reopen
+   its editor.
+4. **Shape its physical geometry.** With a route selected, choose Geometry. Click a geometry span
+   to select it; the Editor panel then exposes its Linear/Bézier mode and maximum speed. Double-
+   click a span to insert an intermediate geometry node, drag an intermediate node to reposition
+   it, and right-click one to remove it. Curves, elevation, and span speed limits change the
+   distance and speed used by vehicles.
+5. **Create and assign a vehicle.** Open the Inspector's Vehicles tab and choose Create Vehicle,
+   or choose Simulation → Manage Vehicles. Enter a name and positive operating values, or choose a
+   preset, then Confirm. Reopen the route editor, select the vehicle under “Vehicles on this
+   route,” and select either the Local or Express stop template. Individual node stops can be
+   toggled, and each selected stop has an editable dwell time in seconds. Save the route to apply
+   the assignment.
+6. **Run the simulation.** Press Play in Simulation Controls (or use Simulation → Start / Resume).
+   At 1×, simulation time follows wall-clock time at 120 updates per second. The vehicle
+   accelerates, observes each geometry-span speed limit, brakes for selected stops, dwells for the
+   configured time, and then continues. Open routes reverse at their ends; closed routes circulate.
+   Use the speed multiplier to inspect behavior faster, and hover a vehicle to read its current
+   speed.
 
 ## Architecture
 
@@ -68,19 +111,21 @@ main
   └─ Simulation
        ├─ core::World              editable runtime state and simulation rules
        │   ├─ logical nodes, routes, segments, and vehicles (generation-safe SlotMaps)
-       │   ├─ PhysicalNode records (type and metre coordinates)
+       │   ├─ PhysicalNode records (type and meter coordinates)
        │   ├─ AbstractNetwork      logical-topology boundary
        │   ├─ PhysicalNetwork      physical-segment-geometry boundary
        │   └─ MapNetwork           future schematic-projection boundary
        └─ render::Render
             ├─ menus, toolbar, normal/debug layout, and ImGui lifecycle
+            ├─ render::EditorLayout shared editor content bounds and gutters
             ├─ ui::DebugPanels     creation/edit dialogs and diagnostics
             └─ render::grid
                  ├─ PhysicalGrid   grid panel composition and camera lifetime
+                 ├─ PhysicalGridViewport scene/backdrop/input coordination
                  ├─ GridCamera     world/screen transforms, panning, and zoom
                  ├─ GridBackdrop   adaptive grid and scale bar
                  ├─ GridInteraction tool input and drag behavior
-                 ├─ GridScene      routes, nodes, vehicles, hover targets
+                 ├─ GridScene      routes, nodes, vehicles, hover targets, and geometry markers
                  └─ GridLabels     readable unrotated and rotated labels
 ```
 
@@ -96,15 +141,17 @@ AbstractNode / AbstractSegment / AbstractRoute
           |                             |
 PhysicalNetwork                  MapNetwork
 real-world track geometry        future distorted schematic geometry
-in metres                        for a metro-style map
+in meters                        for a metro-style map
 ```
 
 `AbstractNode` intentionally has no coordinate. `PhysicalNode` supplies the current editor's
 node type and real-world coordinate. Today, `core::World` is the practical owner of the editable
-node, route, vehicle, and physical-node containers. `AbstractNetwork` and `PhysicalNetwork`
-express the intended boundary, but are not yet the canonical populated store: routes currently
-contain ordered node IDs, their displayed geometry is straight node-to-node lines, and physical
-segment geometry is reserved for the next implementation stage. `MapNetwork` is a placeholder.
+node, route, vehicle, and physical-node containers. Each route has an ordered abstract-node
+sequence plus `PhysicalRouteGeometry`: anchored endpoint nodes, optional intermediate geometry
+nodes, interpolation mode, and span speed limits. The geometry is the source for displayed route
+curves and vehicle travel distance. `AbstractNetwork` and `PhysicalNetwork` still express the
+intended boundary rather than a fully populated canonical store, while `MapNetwork` remains a
+placeholder for schematic projection.
 
 ### Source layout
 
@@ -131,8 +178,8 @@ Primary entry points are `src/main.cpp`, `src/Simulation.cpp`, `src/core/World.c
 - Populate `AbstractNetwork` as the canonical topology, then derive `PhysicalNetwork` and
   `MapNetwork` from it.
 - Generate and persist `AbstractSegment` relationships when routes or track are created.
-- Add physical segment paths beyond straight node-to-node lines: curves, switches, elevation,
-  geometry-aware lengths, and track constraints.
+- Expand physical segment paths with switches, banks, track constraints, and richer elevation
+  handling.
 - Render a separate metro-style diagram from `MapNetwork` with intentionally distorted geometry.
 
 ### Physical-world editing
@@ -155,5 +202,7 @@ Primary entry points are `src/main.cpp`, `src/Simulation.cpp`, `src/core/World.c
 - **Dear ImGui** — menus, modal editors, and diagnostics.
 - **OpenGL 3.3** — renderer backend and map presentation.
 - **CMake** — build configuration and dependency retrieval.
+
+*Project created with AI assistance.*
 
 *Copyright © 2026 Lawrence Chan. All rights reserved.*

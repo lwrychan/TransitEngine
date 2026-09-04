@@ -2,8 +2,8 @@
 
 template <typename Identifier> struct Id
 {
-    int id;
-    int generation;
+  int id;
+  int generation;
 };
 using AbstractNodeId = Id<struct AbstractNodeIdentifier>;
 using AbstractSegmentId = Id<struct AbstractSegmentIdentifier>;

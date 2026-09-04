@@ -27,19 +27,12 @@ add_library(imgui
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-
     ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-target_include_directories(imgui PUBLIC
-    ${imgui_SOURCE_DIR}
-)
-
-target_link_libraries(imgui PUBLIC
-    SDL2::SDL2
-    OpenGL::GL
-)
+target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
+target_link_libraries(imgui PUBLIC SDL2::SDL2 OpenGL::GL)
 
 find_package(OpenGL REQUIRED)
 
@@ -55,43 +48,31 @@ set(SOURCES
     src/render/Render.cpp
     src/render/grid/GridBackdrop.cpp
     src/render/grid/GridCamera.cpp
+    src/render/grid/GridGeometryControls.cpp
     src/render/grid/GridInteraction.cpp
     src/render/grid/GridLabels.cpp
+    src/render/grid/GridNavigationControls.cpp
+    src/render/grid/GridPanelLayout.cpp
+    src/render/grid/GridProjection.cpp
     src/render/grid/GridScene.cpp
     src/render/grid/PhysicalGrid.cpp
+    src/render/grid/PhysicalGridViewport.cpp
     src/ui/DebugPanels.cpp
     src/network/Slot.cpp
     src/network/SlotMap.cpp
     src/network/PhysicalNode.cpp
+    src/network/RouteGeometry.cpp
 )
 
 if(APPLE)
     set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/assets/icons/transit-engine-icon-1024.icns")
-
-    add_executable(
-        TransitEngine
-        MACOSX_BUNDLE
-        ${SOURCES}
-        ${APP_ICON}
-    )
+    add_executable(TransitEngine MACOSX_BUNDLE ${SOURCES} ${APP_ICON})
 else()
-    add_executable(
-        TransitEngine
-        ${SOURCES}
-    )
+    add_executable(TransitEngine ${SOURCES})
 endif()
 
-target_include_directories(
-    TransitEngine
-    PRIVATE
-    include
-)
-
-target_link_libraries(
-    TransitEngine
-    PRIVATE
-    imgui
-)
+target_include_directories(TransitEngine PRIVATE include)
+target_link_libraries(TransitEngine PRIVATE imgui)
 
 if(APPLE)
     add_custom_command(TARGET TransitEngine POST_BUILD
@@ -100,9 +81,7 @@ if(APPLE)
         $<TARGET_BUNDLE_CONTENT_DIR:TransitEngine>/Resources
     )
 
-    set_source_files_properties(${APP_ICON} PROPERTIES
-        MACOSX_PACKAGE_LOCATION "Resources")
-
+    set_source_files_properties(${APP_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     set_target_properties(TransitEngine PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_NAME "TransitEngine"
@@ -111,11 +90,8 @@ if(APPLE)
         MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
     )
-
     target_sources(TransitEngine PRIVATE ${APP_ICON})
-
 else()
-
     add_custom_command(TARGET TransitEngine POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/resources

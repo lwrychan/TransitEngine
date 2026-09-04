@@ -6,37 +6,37 @@
 
 template <typename ItemType> void Slot<ItemType>::setItem(ItemType item)
 {
-    this->item = std::move(item);
+  this->item = std::move(item);
 }
 
 template <typename ItemType> ItemType& Slot<ItemType>::getItem()
 {
-    return this->item;
+  return this->item;
 }
 
 template <typename ItemType> const ItemType& Slot<ItemType>::getItem() const
 {
-    return this->item;
+  return this->item;
 }
 
 template <typename ItemType> void Slot<ItemType>::incrementGeneration()
 {
-    this->generation++;
+  this->generation++;
 }
 
 template <typename ItemType> unsigned int Slot<ItemType>::getGeneration()
 {
-    return this->generation;
+  return this->generation;
 }
 
 template <typename ItemType> unsigned int Slot<ItemType>::getGeneration() const
 {
-    return this->generation;
+  return this->generation;
 }
 
 template <typename ItemType> void Slot<ItemType>::setGeneration(unsigned int generation)
 {
-    this->generation = generation;
+  this->generation = generation;
 }
 
 template class Slot<network::AbstractNode>;

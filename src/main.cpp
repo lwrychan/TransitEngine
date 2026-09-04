@@ -15,26 +15,26 @@ using ProgressBar = cli::display::ProgressBar;
 
 void simulationStartPrint()
 {
-    cli::Terminal::clearScreen();
+  cli::Terminal::clearScreen();
 
-    std::cout << "Starting simulation..." << std::endl;
-    std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
+  std::cout << "Starting simulation..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
 
-    cli::Terminal::clearScreen();
+  cli::Terminal::clearScreen();
 }
 
 int main()
 {
-    CoreConfig config;
+  CoreConfig config;
 
-    config.DEBUG_CLOCK = false;
+  config.DEBUG_CLOCK = false;
 
-    // // Run the synchronized simulation loop inside the world.
-    // World world(config);
+  // // Run the synchronized simulation loop inside the world.
+  // World world(config);
 
-    Simulation sim = Simulation(config);
+  Simulation sim = Simulation(config);
 
-    sim.run();
+  sim.run();
 
-    return 0;
+  return 0;
 }

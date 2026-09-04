@@ -4,12 +4,12 @@
 
 class Resources
 {
-public:
-    Resources();
+  public:
+  Resources();
 
-    const std::string& directory();
+  const std::string& directory();
 
-    std::string baseDirectory;
+  std::string baseDirectory;
 
-private:
+  private:
 };
