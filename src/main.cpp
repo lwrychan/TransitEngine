@@ -1,40 +1,40 @@
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
-#include "core/CoreConfig.hpp"
-#include "core/World.hpp"
-#include "core/Clock.hpp"
-#include "vehicle/Vehicle.hpp"
+#include "Simulation.hpp"
 #include "cli/Terminal.hpp"
 #include "cli/display/ProgressBar.hpp"
-#include "Simulation.hpp"
+#include "core/CoreConfig.hpp"
+#include "core/World.hpp"
+#include "vehicle/Vehicle.hpp"
 
 using namespace core;
 
 using ProgressBar = cli::display::ProgressBar;
 
-void simulationStartPrint() {
-    cli::Terminal::clearScreen();
+void simulationStartPrint()
+{
+  cli::Terminal::clearScreen();
 
-    std::cout << "Starting simulation..." << std::endl;
-    std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
+  std::cout << "Starting simulation..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
 
-    cli::Terminal::clearScreen();
+  cli::Terminal::clearScreen();
 }
 
 int main()
 {
-    CoreConfig config;
+  CoreConfig config;
 
-    config.DEBUG_CLOCK = false;
+  config.DEBUG_CLOCK = false;
 
-    // // Run the synchronized simulation loop inside the world.
-    // World world(config);
+  // // Run the synchronized simulation loop inside the world.
+  // World world(config);
 
-    Simulation sim = Simulation(config);
+  Simulation sim = Simulation(config);
 
-    sim.run();
+  sim.run();
 
-    return 0;
+  return 0;
 }

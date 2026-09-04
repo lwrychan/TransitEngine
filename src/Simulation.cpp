@@ -2,88 +2,172 @@
 #include "core/World.hpp"
 #include "render/Render.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <thread>
+
+using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
 Simulation::Simulation(const CoreConfig& config)
-    : globalConfig(config),
-      timestep(1.0 / config.clockConfig.targetSimulationFps),
-      simulationRunning(false),
-      clock(timestep),
+    : globalConfig(config), timestep(1.0 / config.clockConfig.targetSimulationFps),
+      simulationRunning(false), stepOnceRequested(false), speedMultiplier(1.0), simTime(0.0),
+      lastRenderLatencyMs(0.0), lastSimulationLatencyMs(0.0), lastOverallLatencyMs(0.0),
       world(config)
 {
 }
 
-void Simulation::run() {
-    render::Render renderInstance = render::Render();
-
-    TimePoint iterationStart = std::chrono::high_resolution_clock::now();
-
-    // Initial step and setup for World
-    this->clock.step();
-    this->world.setup();
-
-    // ====================
-    // Set up render resources
-    renderInstance.setup();
-    // ====================
-    bool running = true;
-
-    while (running)
-    {
-        // Update render frame
-        if (!renderInstance.update())
-        {
-            running = false;
-            break;
-        }
-
-        // SIMULATION LOGIC
-
-        // Loop rate limitation
-
-        TimePoint iterationEnd = std::chrono::high_resolution_clock::now();
-
-        double iterationTime = std::chrono::duration<double>(iterationEnd - iterationStart).count();
-
-        if (iterationTime >= this->timestep)
-        {
-            if (this->globalConfig.DEBUG_CLOCK)
-            {
-                std::cout << "Iteration time: " << iterationTime * 1000 << " ms" << std::endl;
-            }
-
-            iterationStart = std::chrono::high_resolution_clock::now();
-
-            // Check for simulation processing time
-            TimePoint stepStart = std::chrono::high_resolution_clock::now();
-
-            // Run step for all simulation modules here
-            this->world.tick();
-
-            TimePoint stepEnd = std::chrono::high_resolution_clock::now();
-        }
-        else
-        {
-
-            std::this_thread::sleep_for(std::chrono::duration<double>((this->timestep - iterationTime) - (this->globalConfig.clockConfig.THREAD_SLEEP_VARIATION_ADJUSTMENT * 1e-3)));
-        }
-
-        if (this->globalConfig.DEBUG_CLOCK)
-        {
-            // Check for 1 ms deviation from expected timestep and log a warning if the simulation is lagging behind
-            if (iterationTime - this->timestep > this->globalConfig.clockConfig.warningThreshold * 1e-3)
-            {
-                std::cout << "WARNING || Simulation step took longer than target timestep. Currently lagging behind by " << (iterationTime - this->timestep) * 1000 << " ms" << std::endl;
-            }
-        }
-    }
+core::World& Simulation::getWorld()
+{
+  return this->world;
 }
 
+const core::World& Simulation::getWorld() const
+{
+  return this->world;
+}
 
+CoreConfig& Simulation::getConfig()
+{
+  return this->globalConfig;
+}
 
+const CoreConfig& Simulation::getConfig() const
+{
+  return this->globalConfig;
+}
 
-//     // Initial setup
-//     this->setup();
+bool Simulation::isRunning() const
+{
+  return this->simulationRunning;
+}
 
-//     while (true)
-//     {
-//         
-//     }
+void Simulation::setRunning(bool running)
+{
+  this->simulationRunning = running;
+}
+
+void Simulation::toggleRunning()
+{
+  this->simulationRunning = !this->simulationRunning;
+}
+
+double Simulation::getSpeedMultiplier() const
+{
+  return this->speedMultiplier;
+}
+
+void Simulation::setSpeedMultiplier(double multiplier)
+{
+  this->speedMultiplier = multiplier > 0.0 ? multiplier : 1.0;
+}
+
+void Simulation::requestStepOnce()
+{
+  this->stepOnceRequested = true;
+}
+
+double Simulation::getSimTime() const
+{
+  return this->simTime;
+}
+
+double Simulation::getTimestep() const
+{
+  return this->timestep;
+}
+
+double Simulation::getLastRenderLatencyMs() const
+{
+  return this->lastRenderLatencyMs;
+}
+
+double Simulation::getLastSimulationLatencyMs() const
+{
+  return this->lastSimulationLatencyMs;
+}
+
+double Simulation::getLastOverallLatencyMs() const
+{
+  return this->lastOverallLatencyMs;
+}
+
+void Simulation::run()
+{
+  render::Render renderInstance = render::Render();
+
+  renderInstance.setup();
+  bool running = true;
+  TimePoint previousFrameTime = std::chrono::high_resolution_clock::now();
+  double accumulatedWallTime = 0.0;
+
+  while (running)
+  {
+    if (!renderInstance.update(*this))
+    {
+      running = false;
+      break;
+    }
+
+    this->lastRenderLatencyMs = renderInstance.getLastRenderWorkMs();
+    this->lastSimulationLatencyMs = 0.0;
+
+    const TimePoint frameTime = std::chrono::high_resolution_clock::now();
+    const double elapsedWallTime =
+        std::chrono::duration<double>(frameTime - previousFrameTime).count();
+    previousFrameTime = frameTime;
+
+    if (this->simulationRunning)
+    {
+      accumulatedWallTime += elapsedWallTime;
+      const TimePoint stepStart = std::chrono::high_resolution_clock::now();
+      while (accumulatedWallTime >= this->timestep)
+      {
+        this->world.tick(this->timestep * this->speedMultiplier);
+        this->simTime += this->timestep * this->speedMultiplier;
+        accumulatedWallTime -= this->timestep;
+      }
+      const TimePoint stepEnd = std::chrono::high_resolution_clock::now();
+      this->lastSimulationLatencyMs =
+          std::chrono::duration<double>(stepEnd - stepStart).count() * 1000.0;
+    }
+    else if (this->stepOnceRequested)
+    {
+      const TimePoint stepStart = std::chrono::high_resolution_clock::now();
+      this->world.tick(this->timestep * this->speedMultiplier);
+      this->simTime += this->timestep * this->speedMultiplier;
+      this->stepOnceRequested = false;
+      accumulatedWallTime = 0.0;
+      const TimePoint stepEnd = std::chrono::high_resolution_clock::now();
+      this->lastSimulationLatencyMs =
+          std::chrono::duration<double>(stepEnd - stepStart).count() * 1000.0;
+    }
+    else
+    {
+      accumulatedWallTime = 0.0;
+    }
+
+    this->lastOverallLatencyMs = elapsedWallTime * 1000.0;
+
+    if (this->globalConfig.DEBUG_CLOCK)
+    {
+      const double targetMs = this->timestep * 1000.0;
+      const double warningThresholdMs = this->globalConfig.clockConfig.warningThreshold;
+      if (this->lastOverallLatencyMs > targetMs + warningThresholdMs)
+      {
+        std::cout << "WARNING || Overall latency exceeded target timestep. Over by "
+                  << (this->lastOverallLatencyMs - targetMs) << " ms" << std::endl;
+      }
+    }
+
+    if (this->simulationRunning && accumulatedWallTime < this->timestep)
+    {
+      const double sleepSeconds =
+          std::max(0.0, this->timestep - accumulatedWallTime -
+                            this->globalConfig.clockConfig.threadSleepVariationAdjustment * 1e-3);
+      std::this_thread::sleep_for(std::chrono::duration<double>(sleepSeconds));
+    }
+  }
+
+  renderInstance.close();
+}

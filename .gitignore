@@ -39,3 +39,15 @@ build/
 
 # vscode
 .vscode/
+
+graphify-out/
+
+# Cursor
+.cursor/
+
+# Codex / AI-agent local files
+.codex/
+
+AGENTS.md
+
+.clang-format

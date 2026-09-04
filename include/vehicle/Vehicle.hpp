@@ -1,56 +1,90 @@
 #pragma once
 
-#include "core/SegmentId.hpp"
-#include "core/RouteId.hpp"
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "Identifiers.hpp"
 
 namespace vehicle
 {
-    class Vehicle
-    {
-    public:
-        Vehicle(double maxOperatingSpeedKph, double accelerationKphPerSecond, double decelerationKphPerSecond, int passengerCapacity);
+struct RouteStop
+{
+  AbstractNodeId node;
+  double dwellSeconds = 20.0;
+};
 
-        void update(double timestep);
+class Vehicle
+{
+  public:
+  Vehicle() = default;
+  Vehicle(double maxOperatingSpeedKph, double accelerationKphPerSecond,
+          double decelerationKphPerSecond, int passengerCapacity);
+  Vehicle(const std::string& displayName, double maxOperatingSpeedKph,
+          double accelerationKphPerSecond, double decelerationKphPerSecond, int passengerCapacity);
 
-        const double getMaxOperatingSpeedMs();
-        // Returns configured maximum speed in meters/second (m/s)
+  double update(double timestep, double distanceToControlPoint, double speedLimitMs);
 
-        const double getMaxOperatingSpeedKph();
-        // Returns maximum speed in kilometers/hour (km/h)
+  void assignRoute(AbstractRouteId route, std::vector<RouteStop> stops);
+  void clearRoute();
+  const std::optional<AbstractRouteId>& getAssignedRoute() const;
+  const std::vector<RouteStop>& getStops() const;
+  void setStops(std::vector<RouteStop> stops);
+  void beginDwell(double seconds);
+  bool isDwelling() const;
+  double getRemainingDwellSeconds() const;
+  double getRouteProgressMeters() const;
+  void setRouteProgressMeters(double progressMeters);
+  int getRouteDirection() const;
+  void setRouteDirection(int direction);
 
-        const double getAccelerationMs2();
-        // Returns configured acceleration in meters/second squared (m/s^2)
+  const std::string& getDisplayName() const;
 
-        const double getDecelerationMs2();
-        // Returns configured deceleration in meters/second squared (m/s^2)
+  const double getMaxOperatingSpeedMs();
+  // Returns configured maximum speed in meters/second (m/s)
 
-        const double getAccelerationKphPerSecond();
-        // Returns configured acceleration in meters/second squared (km/h/s)
+  const double getMaxOperatingSpeedKph();
+  // Returns maximum speed in kilometers/hour (km/h)
 
-        const double getDecelerationKphPerSecond();
-        // Returns configured deceleration in meters/second squared (km/h/s)
+  const double getAccelerationMs2();
+  // Returns configured acceleration in meters/second squared (m/s^2)
 
-        const int getPassengerCapacity();
-        // Returns configured passenger capacity (number of passengers)
+  const double getDecelerationMs2();
+  // Returns configured deceleration in meters/second squared (m/s^2)
 
-    protected:
-        double setMaxOperatingSpeed(double speedKph);
-        double setAcceleration(double accelerationKphPerSecond);
-        double setDeceleration(double decelerationKphPerSecond);
-        int setPassengerCapacity(int capacity);
+  const double getAccelerationKphPerSecond();
+  // Returns configured acceleration in meters/second squared (km/h/s)
 
-        void setRoute(core::RouteId route);
-        void setSegment(core::SegmentId route);
+  const double getDecelerationKphPerSecond();
+  // Returns configured deceleration in meters/second squared (km/h/s)
 
-    private:
-        double maxOperatingSpeed;
-        double acceleration;
-        double deceleration;
-        int passengerCapacity;
+  const int getPassengerCapacity();
+  // Returns configured passenger capacity (number of passengers)
 
-        core::RouteId assignedRouteId;
-        core::SegmentId currentSegmentId;
+  double getCurrentSpeedKph() const;
 
-        double segmentProgress = 0.0;
-    };
-}
+  protected:
+  double setMaxOperatingSpeed(double speedKph);
+  double setAcceleration(double accelerationKphPerSecond);
+  double setDeceleration(double decelerationKphPerSecond);
+  int setPassengerCapacity(int capacity);
+
+  void setSegment(AbstractSegmentId segment);
+
+  private:
+  std::string displayName;
+  double maxOperatingSpeed;
+  double acceleration;
+  double deceleration;
+  int passengerCapacity;
+
+  std::optional<AbstractRouteId> assignedRouteId;
+  std::vector<RouteStop> stops;
+  AbstractSegmentId currentSegmentId;
+
+  double routeProgressMeters = 0.0;
+  int routeDirection = 1;
+  double currentSpeed = 0.0;
+  double remainingDwellSeconds = 0.0;
+};
+} // namespace vehicle
